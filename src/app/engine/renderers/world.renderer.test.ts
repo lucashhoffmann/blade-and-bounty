@@ -13,7 +13,7 @@ import {
 } from '@/app/store/game-store/game.store';
 import { addEnemy, createArenaWorld } from '@/test/world.fixture';
 
-it('corvos voam apenas nas salas sorteadas e respeitam a opção gráfica', () => {
+it('corvos pousam nas paredes, voam entre elas e respeitam a opção gráfica', () => {
   const world = createArenaWorld();
   const scene = new THREE.Scene();
   const renderer = createWorldRenderer(
@@ -30,11 +30,24 @@ it('corvos voam apenas nas salas sorteadas e respeitam a opção gráfica', () =
   renderer.sync(world, 1);
   const crow = scene.getObjectByName('crow')!;
   const wing = crow.getObjectByName('crowWing')!;
-  const position = crow.position.clone();
-  const flap = wing.rotation.z;
+  const firstPerch = crow.position.clone();
+  const wallBelow = () => {
+    const col = Math.floor(crow.position.x);
+    const row = ROOM_H - 1 - Math.floor(-crow.position.z - 3 * ROOM_H);
+    return world.rooms[0].tiles[row][col];
+  };
+  expect(crow.position.y).toBeCloseTo(1.32);
+  expect(wallBelow()).toBe('#');
   renderer.sync(world, 2);
-  expect(crow.position.equals(position)).toBe(false);
-  expect(wing.rotation.z).not.toBe(flap);
+  expect(crow.position.equals(firstPerch)).toBe(true);
+  const folded = Math.abs(wing.scale.x);
+  renderer.sync(world, 4);
+  expect(crow.position.y).toBeGreaterThan(firstPerch.y);
+  expect(Math.abs(wing.scale.x)).toBeGreaterThan(folded);
+  renderer.sync(world, 6);
+  expect(crow.position.y).toBeCloseTo(firstPerch.y);
+  expect(crow.position.equals(firstPerch)).toBe(false);
+  expect(wallBelow()).toBe('#');
   renderer.dispose();
 
   const hiddenScene = new THREE.Scene();

@@ -89,9 +89,7 @@ describe('HomePage', () => {
     await userEvent.click(
       screen.getByRole('checkbox', { name: /Desfoque de movimento/ }),
     );
-    await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Corvos voando' }),
-    );
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Corvos' }));
     expect(useGameStore.getState().graphics).toEqual({
       quality: 'low',
       blur: false,

@@ -1004,11 +1004,11 @@ export function createWorldRenderer(
     return character;
   }
 
-  // Anda: inclina para frente e balanca. Parado: cabeca olha para os lados.
+  // Anda: inclina para frente e balanca. A cabeca olha para os lados.
   // A simulacao anda em passo fixo e o render nao: num frame sem passo a
   // posicao nao muda. Por isso posicao, giro e velocidade sao suavizados aqui,
   // senao o corpo trava e a inclinacao pisca. `gaze` fixa para onde a cabeca
-  // olha; null deixa olhar em volta quando parado. Devolve o quanto esta
+  // olha; null deixa olhar em volta, com menor amplitude ao andar. Devolve o quanto esta
   // andando (0..1).
   function animate(
     character: Character,
@@ -1061,21 +1061,23 @@ export function createWorldRenderer(
           : -side * swing * 0.6;
     });
 
-    const look =
-      gaze !== null
-        ? gaze
-        : character.idle > IDLE_DELAY
-          ? Math.sin((character.idle - IDLE_DELAY) * 2.2) * 0.9
-          : 0;
+    const scan = moving
+      ? Math.sin(time * 1.6 + root.id) * 0.25
+      : character.idle > IDLE_DELAY
+        ? Math.sin((character.idle - IDLE_DELAY) * 1.6 + root.id) * 0.55
+        : 0;
+    const look = gaze ?? scan;
     head.rotation.y += (look - head.rotation.y) * ease;
     return sway;
   }
 
   const rooms = new Map<number, THREE.Group>();
-  const crows = new Map<
-    number,
-    { body: THREE.Group; wings: [THREE.Group, THREE.Group] }[]
-  >();
+  type Crow = {
+    body: THREE.Group;
+    wings: [THREE.Group, THREE.Group];
+    perches: [Vec2, Vec2];
+  };
+  const crows = new Map<number, Crow[]>();
   // Kit de cenario (SCENERY): piso, parede, caixas, baus e moedas de modelo.
   // Enquanto o arquivo nao chega, e para sempre se nao chegar, vale o cenario
   // de caixas e papel de parede.
@@ -1410,42 +1412,6 @@ export function createWorldRenderer(
 
   function buildRoom(room: Room): THREE.Group {
     const group = new THREE.Group();
-    if (
-      showCrows &&
-      room.kind === 'combat' &&
-      spotHash(room.index, 2, 5) % 3 === 0
-    ) {
-      const flock: { body: THREE.Group; wings: [THREE.Group, THREE.Group] }[] =
-        [];
-      for (let i = 0; i < 1 + (spotHash(room.index, 3, 1) % 2); i++) {
-        const body = new THREE.Group();
-        body.name = 'crow';
-        const torso = new THREE.Mesh(geo.crowBody, mat.crow);
-        torso.scale.set(0.17, 0.11, 0.27);
-        body.add(torso);
-        const head = new THREE.Mesh(geo.crowBody, mat.crow);
-        head.scale.setScalar(0.12);
-        head.position.z = -0.25;
-        body.add(head);
-        const beak = new THREE.Mesh(geo.crowBeak, mat.crowBeak);
-        beak.position.z = -0.39;
-        body.add(beak);
-        const wings = [new THREE.Group(), new THREE.Group()] as [
-          THREE.Group,
-          THREE.Group,
-        ];
-        wings.forEach((wing, side) => {
-          wing.name = 'crowWing';
-          wing.position.x = side ? -0.1 : 0.1;
-          wing.scale.x = side ? -1 : 1;
-          wing.add(new THREE.Mesh(geo.crowWing, mat.crow));
-          body.add(wing);
-        });
-        group.add(body);
-        flock.push({ body, wings });
-      }
-      crows.set(room.index, flock);
-    }
     // um contrato = um nivel: SHOP_EVERY salas com a mesma parede e piso
     const level = Math.max(0, Math.floor((room.index - 1) / SHOP_EVERY));
     let papers = wallpapers.get(level);
@@ -1538,6 +1504,53 @@ export function createWorldRenderer(
         }
       }
     });
+    const perches = walls.filter(
+      (wall) => wall.open && wall.col > 0 && wall.col < ROOM_W - 1,
+    );
+    if (
+      showCrows &&
+      room.kind === 'combat' &&
+      spotHash(room.index, 2, 5) % 3 === 0 &&
+      perches.length > 1
+    ) {
+      const flock: Crow[] = [];
+      for (let i = 0; i < 1 + (spotHash(room.index, 3, 1) % 2); i++) {
+        const body = new THREE.Group();
+        body.name = 'crow';
+        const torso = new THREE.Mesh(geo.crowBody, mat.crow);
+        torso.scale.set(0.17, 0.11, 0.27);
+        body.add(torso);
+        const head = new THREE.Mesh(geo.crowBody, mat.crow);
+        head.scale.setScalar(0.12);
+        head.position.z = -0.25;
+        body.add(head);
+        const beak = new THREE.Mesh(geo.crowBeak, mat.crowBeak);
+        beak.position.z = -0.39;
+        body.add(beak);
+        const wings = [new THREE.Group(), new THREE.Group()] as [
+          THREE.Group,
+          THREE.Group,
+        ];
+        wings.forEach((wing, side) => {
+          wing.name = 'crowWing';
+          wing.position.x = side ? -0.1 : 0.1;
+          wing.scale.x = side ? -1 : 1;
+          wing.add(new THREE.Mesh(geo.crowWing, mat.crow));
+          body.add(wing);
+        });
+        const start = spotHash(room.index, i, 2) % perches.length;
+        group.add(body);
+        flock.push({
+          body,
+          wings,
+          perches: [
+            perches[start],
+            perches[(start + Math.floor(perches.length / 2)) % perches.length],
+          ],
+        });
+      }
+      crows.set(room.index, flock);
+    }
     // saida com porta (sala inicial, mercador, entrada e saida da arena do
     // chefe): na face de dentro da parede
     if (hasExitDoor(room.index)) {
@@ -2064,7 +2077,7 @@ export function createWorldRenderer(
   // caixa: agacha.
   // Parado nela (`canHug`): encosta de costas, olhando para os lados; na
   // quina, sai de lado e espia para alem dela.
-  // `dash` e o tempo que falta no ar. `lookAround`: cabeca passeia parado.
+  // `dash` e o tempo que falta no ar. `lookAround`: cabeca olha aos lados.
   function animateJumper(
     jumper: Jumper,
     world: World,
@@ -2701,7 +2714,7 @@ export function createWorldRenderer(
         time,
         who.adrenaline > 0 ? ADRENALINE_LEAN : RUN_LEAN,
         who.slash <= 0,
-        true,
+        who.slash <= 0 && who.dash <= 0,
         who.crouching,
       );
       // golpe de salto (no ar ou logo depois de pousar) sai girando
@@ -2749,6 +2762,7 @@ export function createWorldRenderer(
           swing: Math.max(0, body.swing),
           spinning: view.spinning,
           dead: lost,
+          look: lost ? 0 : body.head.rotation.y,
         },
         dt,
       );
@@ -2892,22 +2906,25 @@ export function createWorldRenderer(
         if (!rooms.has(room.index)) rooms.set(room.index, buildRoom(room));
       }
       reconcile(rooms, new Set(world.rooms.map((r) => r.index)), removeRoom);
-      for (const [index, flock] of crows) {
-        flock.forEach(({ body, wings }, i) => {
-          const angle = time * (0.9 + i * 0.15) + spotHash(index, i, 3) * 0.01;
-          const radiusX = 1.4 + i * 0.45;
-          const radiusZ = 1 + i * 0.3;
+      for (const flock of crows.values()) {
+        flock.forEach(({ body, wings, perches }, i) => {
+          const phase = (time + i * 5) % 10;
+          const flying = (phase >= 3 && phase < 5) || phase >= 8;
+          const [from, to] = phase < 5 ? perches : [perches[1], perches[0]];
+          const travel = flying ? (phase < 5 ? phase - 3 : phase - 8) / 2 : 0;
+          const progress = travel * travel * (3 - 2 * travel);
           body.position.set(
-            ROOM_W / 2 + Math.cos(angle) * radiusX,
-            1.7 + Math.sin(time * 2 + i) * 0.12,
-            -(index + 0.5) * ROOM_H - Math.sin(angle) * radiusZ,
+            from.x + (to.x - from.x) * progress,
+            WALL_HEIGHT + 0.12 + Math.sin(Math.PI * progress) * 0.9,
+            -from.y - (to.y - from.y) * progress,
           );
-          body.rotation.y = Math.atan2(
-            radiusX * Math.sin(angle),
-            radiusZ * Math.cos(angle),
-          );
-          wings[0].rotation.z = 0.25 + Math.sin(time * 11 + i) * 0.65;
-          wings[1].rotation.z = -wings[0].rotation.z;
+          body.rotation.y = Math.atan2(from.x - to.x, to.y - from.y);
+          wings.forEach((wing, side) => {
+            wing.scale.x = (side ? -1 : 1) * (flying ? 1 : 0.25);
+            wing.rotation.z =
+              (side ? -1 : 1) *
+              (flying ? 0.25 + Math.sin(time * 11 + i) * 0.65 : 0.15);
+          });
         });
       }
       for (const index of chestLids.keys()) {
@@ -3091,8 +3108,7 @@ export function createWorldRenderer(
             time,
             RUN_LEAN,
             enemy.state === 'patrol' && enemy.attack <= 0,
-            // sem encostar nao olha em volta: o cone mostra para onde ele ve
-            false,
+            enemy.attack <= 0 && enemy.dash <= 0,
           );
           poseAttack(view.character, enemy.attack);
           updateCone(world, enemy, view.cone);
@@ -3139,6 +3155,7 @@ export function createWorldRenderer(
             swing: Math.max(0, view.character.swing),
             spinning: false,
             dead,
+            look: dead ? 0 : view.character.head.rotation.y,
           },
           dt,
         );

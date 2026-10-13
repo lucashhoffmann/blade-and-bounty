@@ -838,8 +838,9 @@ criar o renderer (vale a partir da proxima partida). `quality` e o teto de
 pixels por ponto da tela (`high` 2, `medium` 1.5, `low` 1; no `low` tambem
 sem antialias); `blur` liga o desfoque de CSS do canvas (salto, golpe,
 perseguicao). Padrao: `high` no computador, `medium` em aparelho de toque,
-`blur` e `crows` ligados. `crows` controla os corvos decorativos em algumas
-salas de combate. `setGraphics` ignora valor invalido.
+`blur` e `crows` ligados. `crows` controla os corvos decorativos que pousam
+nas paredes e voam entre elas em algumas salas de combate. `setGraphics`
+ignora valor invalido.
 `bloodColor` e uma cor `#rrggbb` escolhida nas configuracoes da home. O
 renderer a le ao abrir a run; a poca sob cada inimigo morto cresce suavemente
 por `BLOOD_GROW_TIME` segundos ate um tamanho fixo.
@@ -918,7 +919,8 @@ function createGameEngine(canvas: HTMLCanvasElement): { dispose(): void };
 - ao matar (inimigo passa a `dead`), a engine solta uma explosao de moedas de ouro e gotas de sangue, junto com o zoom e o blur da camera. So
   visual: nao da dinheiro (quem da e o `Pickup` da morte)
 - animacao so visual, derivada do `World` a cada frame: inclinar ao andar,
-  cabeca olhando para os lados quando parado, golpe de espada, zoom com blur
+  cabeca do jogador e dos inimigos olhando para os lados (mais suave ao andar),
+  golpe de espada, zoom com blur
   quando `run.kills` sobe
 - `dispose` cancela o loop, remove listeners e libera geometrias e materiais
 

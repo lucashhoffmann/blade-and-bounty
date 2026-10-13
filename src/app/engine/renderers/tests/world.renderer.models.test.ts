@@ -107,6 +107,24 @@ const parts = (body: ReturnType<typeof fakeBody>) =>
   )!;
 
 describe('inimigo com corpo de modelo', () => {
+  it('jogador e inimigo olham para os dois lados com a cabeca', async () => {
+    const { hero, foe, world, renderer } = setup();
+    renderer.sync(world, 1);
+    await arrive();
+    const heroLooks: number[] = [];
+    const foeLooks: number[] = [];
+    for (let i = 1; i <= 80; i++) {
+      renderer.sync(world, 1 + i * 0.1);
+      heroLooks.push(lastPose(hero).look ?? 0);
+      foeLooks.push(lastPose(foe).look ?? 0);
+    }
+    for (const looks of [heroLooks, foeLooks]) {
+      expect(Math.max(...looks)).toBeGreaterThan(0.2);
+      expect(Math.min(...looks)).toBeLessThan(-0.2);
+    }
+    renderer.dispose();
+  });
+
   it('enquanto o modelo nao chega nada do corpo aparece; depois, so o modelo', async () => {
     const { foe, world, scene, renderer } = setup();
     renderer.sync(world, 1);

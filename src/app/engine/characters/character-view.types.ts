@@ -20,6 +20,8 @@ export type CharacterPose = {
   // o golpe em curso e o giro
   spinning: boolean;
   dead: boolean;
+  // giro lateral da cabeca em relacao a pose do clipe
+  look?: number;
   // Tudo daqui para baixo e opcional: enriquece a animacao quando o
   // esqueleto tem os clipes, e nao faz falta quando nao tem.
   // numero fixo do personagem (o id): escolhe entre as variacoes de parado,

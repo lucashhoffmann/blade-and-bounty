@@ -13,7 +13,7 @@ export const KAYKIT_MEDIUM: RigSpec = {
   scale: 0.66,
   // glTF olha para +z; o jogo usa +x como frente
   turn: Math.PI / 2,
-  slots: { rightHand: 'handslot.r', leftHand: 'handslot.l' },
+  slots: { rightHand: 'handslot.r', leftHand: 'handslot.l', head: 'head' },
   // medido nas poses de mira (Ranged_1H_Aiming, Ranged_2H_Aiming e
   // Ranged_Bow_Aiming_Idle): a frente e o topo do mundo nos eixos da mao
   grips: {

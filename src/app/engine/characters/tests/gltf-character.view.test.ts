@@ -16,6 +16,9 @@ function model() {
   // o carregador ja tirou o ponto de 'handslot.r'
   hand.name = 'handslotr';
   hips.add(hand);
+  const head = new THREE.Bone();
+  head.name = 'head';
+  hips.add(head);
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(),
     new THREE.MeshStandardMaterial({ color: 0x336699 }),
@@ -43,7 +46,7 @@ const CLIPS = [
 const RIG: RigSpec = {
   scale: 0.5,
   turn: Math.PI / 2,
-  slots: { rightHand: 'handslot.r' },
+  slots: { rightHand: 'handslot.r', head: 'head' },
   clips: {
     idle: { name: 'idle' },
     move: { name: 'run' },
@@ -117,6 +120,19 @@ describe('createGltfCharacterView', () => {
     const view = createGltfCharacterView(model(), CLIPS, RIG);
     expect(view.slot('rightHand')?.name).toBe('handslotr');
     expect(view.slot('leftHand')).toBeNull();
+  });
+
+  it('gira a cabeca sobre a pose sem acumular o giro a cada quadro', () => {
+    const view = createGltfCharacterView(model(), CLIPS, RIG);
+    const head = view.slot('head')!;
+    view.pose({ ...REST, look: 0.5 }, 0.1);
+    expect(head.rotation.y).toBeCloseTo(0.5);
+    view.pose({ ...REST, look: 0.5 }, 0.1);
+    expect(head.rotation.y).toBeCloseTo(0.5);
+    view.pose({ ...REST, look: -0.4 }, 0.1);
+    expect(head.rotation.y).toBeCloseTo(-0.4);
+    view.pose({ ...REST, dead: true, look: 0.5 }, 0.1);
+    expect(head.rotation.y).toBeCloseTo(0);
   });
 
   it('destaque pinta so este corpo e volta ao normal', () => {

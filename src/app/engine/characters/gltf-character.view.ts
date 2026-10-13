@@ -96,6 +96,12 @@ export function createGltfCharacterView(
     ),
   );
   const split = lower.size > 0;
+  const head = rig.slots.head
+    ? body.getObjectByName(
+        THREE.PropertyBinding.sanitizeNodeName(rig.slots.head),
+      )
+    : null;
+  let lastLook = 0;
   const add = (name: string, part?: 'upper' | 'lower') => {
     const whole = THREE.AnimationClip.findByName(clips, name);
     // clipe que falta no arquivo: a acao so nao aparece
@@ -131,6 +137,8 @@ export function createGltfCharacterView(
   return {
     object,
     pose(pose: CharacterPose, dt: number) {
+      // clipes sem curva da cabeca deixariam o giro anterior acumular
+      if (head) head.rotation.y -= lastLook;
       deadFor = pose.dead ? deadFor + dt : 0;
       const commands = driveClips(rig.clips, pose, deadFor, duration, split);
       for (const [id, action] of actions) {
@@ -146,6 +154,8 @@ export function createGltfCharacterView(
         action.time = command.time;
       }
       mixer.update(dt);
+      lastLook = pose.dead ? 0 : (pose.look ?? 0);
+      if (head) head.rotation.y += lastLook;
       const rolling = rig.roll && pose.dash !== null && !pose.dead;
       const air = rolling ? Math.min(1, Math.max(0, pose.dash!)) : 0;
       // sai e chega devagar: a volta fecha junto com o pouso
