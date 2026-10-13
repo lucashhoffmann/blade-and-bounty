@@ -13,6 +13,42 @@ import {
 } from '@/app/store/game-store/game.store';
 import { addEnemy, createArenaWorld } from '@/test/world.fixture';
 
+it('corvos voam apenas nas salas sorteadas e respeitam a opção gráfica', () => {
+  const world = createArenaWorld();
+  const scene = new THREE.Scene();
+  const renderer = createWorldRenderer(
+    scene,
+    DEFAULT_LOOK,
+    DEFAULT_BLOOD_COLOR,
+  );
+
+  world.rooms[0].index = 1;
+  renderer.sync(world, 1);
+  expect(scene.getObjectByName('crow')).toBeUndefined();
+
+  world.rooms[0].index = 3;
+  renderer.sync(world, 1);
+  const crow = scene.getObjectByName('crow')!;
+  const wing = crow.getObjectByName('crowWing')!;
+  const position = crow.position.clone();
+  const flap = wing.rotation.z;
+  renderer.sync(world, 2);
+  expect(crow.position.equals(position)).toBe(false);
+  expect(wing.rotation.z).not.toBe(flap);
+  renderer.dispose();
+
+  const hiddenScene = new THREE.Scene();
+  const hidden = createWorldRenderer(
+    hiddenScene,
+    DEFAULT_LOOK,
+    DEFAULT_BLOOD_COLOR,
+    false,
+  );
+  hidden.sync(world, 1);
+  expect(hiddenScene.getObjectByName('crow')).toBeUndefined();
+  hidden.dispose();
+});
+
 it('remove o F da cena assim que a caixa quebra', () => {
   const world = createArenaWorld({ 9: '#....o....#' });
   const scene = new THREE.Scene();

@@ -87,7 +87,7 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
 
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   const { look, bloodColor } = useGameStore.getState();
-  const view = createWorldRenderer(scene, look, bloodColor);
+  const view = createWorldRenderer(scene, look, bloodColor, graphics.crows);
 
   const keys = new Set<string>();
   const input: InputState = { moveX: 0, moveY: 0, dash: false };

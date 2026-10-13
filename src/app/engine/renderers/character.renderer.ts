@@ -69,8 +69,9 @@ export type Character = {
   last: Vec2 | null;
   speed: number;
   idle: number;
-  // golpe de espada em curso: qual jeito (indice em SWINGS; -1 = ainda nao
-  // golpeou) e quanto faltava no quadro anterior, para notar golpe novo
+  // golpe de espada em curso: quantos ja deu (o jeito e este numero dando a
+  // volta em SWINGS; -1 = ainda nao golpeou) e quanto faltava no quadro
+  // anterior, para notar golpe novo
   swing: number;
   attackLeft: number;
 };
@@ -497,21 +498,19 @@ export function poseAttack(
   spinning = false,
 ): void {
   const { body, head, arms, legs, sword } = character;
-  // golpe novo (o tempo que falta subiu): sorteia outro jeito. O primeiro
-  // golpe de cada personagem e sempre o corte lateral. Golpe de salto e
-  // sempre o giro.
+  // golpe novo (o tempo que falta subiu): o proximo da sequencia, sempre na
+  // mesma ordem, a partir do corte lateral. Golpe de salto pula direto para
+  // o giro.
   if (remaining > character.attackLeft && sword) {
-    character.swing = spinning
-      ? SWINGS.findIndex((swing) => swing.spin > 0)
-      : character.swing < 0
-        ? 0
-        : (character.swing +
-            1 +
-            Math.floor(Math.random() * (SWINGS.length - 1))) %
-          SWINGS.length;
+    character.swing += 1;
+    while (spinning && SWINGS[character.swing % SWINGS.length].spin <= 0) {
+      character.swing += 1;
+    }
   }
   character.attackLeft = remaining;
-  const how = sword ? SWINGS[Math.max(0, character.swing)] : RECOIL;
+  const how = sword
+    ? SWINGS[Math.max(0, character.swing) % SWINGS.length]
+    : RECOIL;
   const phase = Math.max(0, Math.min(1, 1 - remaining / SLASH_TIME));
   const windup =
     remaining > 0 && phase < 0.5 ? Math.sin(Math.PI * phase * 2) : 0;

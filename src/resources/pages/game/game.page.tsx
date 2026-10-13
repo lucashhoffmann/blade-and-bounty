@@ -16,6 +16,7 @@ import { Scoreboard } from '@/resources/pages/game/components/scoreboard.compone
 import { KillStreak } from '@/resources/pages/game/components/kill-streak.component';
 import { LegendDialog } from '@/resources/pages/game/components/legend-dialog.component';
 import { ShopDialog } from '@/resources/pages/game/components/shop-dialog.component';
+import { TutorialOverlay } from '@/resources/pages/game/components/tutorial-overlay/tutorial-overlay.component';
 import { useGamePage } from '@/resources/pages/game/use-game.page';
 
 // abaixo disso (pontos de vida) a tela pulsa em vermelho
@@ -55,6 +56,7 @@ export function GamePage() {
     scoreboard,
     toggleScoreboard,
     backToMenu,
+    tutorial,
   } = useGamePage();
 
   return (
@@ -131,10 +133,12 @@ export function GamePage() {
           onAttack={pressJoystickAttack}
         />
       )}
+      {/* no tutorial a abertura e o proprio guia; a pausa segue na legenda */}
       <LegendDialog
-        open={screen === 'intro' || screen === 'paused'}
+        open={(screen === 'intro' && !tutorial) || screen === 'paused'}
         {...legend}
       />
+      <TutorialOverlay />
       <ShopDialog
         open={screen === 'shop'}
         money={hud.money}

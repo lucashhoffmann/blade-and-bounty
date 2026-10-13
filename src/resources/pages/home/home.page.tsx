@@ -1,4 +1,11 @@
-import { Play, Settings, Store, Trophy, Users } from 'lucide-react';
+import {
+  GraduationCap,
+  Play,
+  Settings,
+  Store,
+  Trophy,
+  Users,
+} from 'lucide-react';
 
 import {
   GRAPHICS_QUALITIES,
@@ -27,6 +34,10 @@ export function HomePage() {
   const setLanguage = useLanguage((state) => state.setLanguage);
   const best = useGameStore((state) => state.best);
   const startRun = useGameStore((state) => state.startRun);
+  // primeira vez: o Play leva ao tutorial (da para pular); depois, o botao
+  // proprio refaz quando quiser
+  const tutorialDone = useGameStore((state) => state.tutorialDone);
+  const startTutorial = useGameStore((state) => state.startTutorial);
   const openCharacter = useGameStore((state) => state.openCharacter);
   const rubies = useGameStore((state) => state.rubies);
   const openLobby = useGameStore((state) => state.openLobby);
@@ -89,7 +100,7 @@ export function HomePage() {
       <button
         type='button'
         className={`${CHUNKY} relative bg-[var(--game-success)] px-14 py-4 text-4xl`}
-        onClick={() => startRun()}
+        onClick={() => (tutorialDone ? startRun() : startTutorial())}
       >
         <Play
           aria-hidden
@@ -121,6 +132,18 @@ export function HomePage() {
             />
             {rubies}
           </span>
+        </button>
+        <button
+          type='button'
+          className={SECONDARY}
+          onClick={startTutorial}
+        >
+          <GraduationCap
+            aria-hidden
+            className='size-5'
+            strokeWidth={3}
+          />
+          {t.tutorial.button}
         </button>
         {/* so com o servidor de salas no ar (use-home.page) */}
         {online && (
@@ -202,6 +225,17 @@ export function HomePage() {
                   checked={graphics.blur}
                   onChange={(event) =>
                     setGraphics({ blur: event.target.checked })
+                  }
+                  className='size-5 cursor-pointer'
+                />
+              </label>
+              <label className='flex items-center justify-between gap-4 pt-2'>
+                <span>{t.home.crows}</span>
+                <input
+                  type='checkbox'
+                  checked={graphics.crows}
+                  onChange={(event) =>
+                    setGraphics({ crows: event.target.checked })
                   }
                   className='size-5 cursor-pointer'
                 />

@@ -132,9 +132,10 @@ na primeira metade) e `strike` (o corte). Cada jeito de golpear e um `Swing`
 em `SWINGS`: so numeros dizendo quanto o tronco torce, quanto o braco abre e
 sobe, quanto a lamina deita e varre, e quantas voltas o corpo da (`spin`).
 
-- golpe novo sorteia um jeito diferente do anterior; o primeiro de cada
-  personagem e o corte lateral
-- `spinning` forca o giro: e o golpe de salto do player
+- golpe novo e o proximo da sequencia (combo), sempre na mesma ordem; o
+  primeiro de cada personagem e o corte lateral. `character.swing` conta os
+  golpes; o jeito e esse numero dando a volta na lista
+- `spinning` pula direto para o giro: e o golpe de salto do player
 - golpe novo = mais um objeto em `SWINGS`. Nao precisa de codigo
 
 ## 6. Aparencia do jogador
@@ -228,7 +229,7 @@ turned = phase^2 * (3 - 2 * phase)          volta do giro, saindo e chegando dev
 tronco ainda termina de armar. E o que da peso ao golpe.
 
 Cada articulacao recebe `windup * (numero de preparo) + strike * (numero de
-golpe)`, com os numeros vindos do `Swing` sorteado:
+golpe)`, com os numeros vindos do `Swing` da vez:
 
 | Articulacao          | Preparo (`windup`)  | Golpe (`strike`)                    |
 | -------------------- | ------------------- | ----------------------------------- |
@@ -561,7 +562,7 @@ Como a pose e montada:
 | `shot`      | quem atira: apontando (`AIM_HOLD`) em `alert`, e dali ate 1 no disparo | com arma na mao: apontando, e ate 1 no disparo (`player.shot`) |
 | `dash`      | `1 - enemy.dash / DASH_TIME`                                           | `1 - player.dash / DASH_TIME`                                  |
 | `spinning`  | nunca                                                                  | golpe que comecou em salto; vale ate o golpe acabar            |
-| `swing`     | o indice sorteado pelo personagem de pecas                             | igual                                                          |
+| `swing`     | o contador de golpes do personagem de pecas                            | igual                                                          |
 
 Player, alem disso:
 

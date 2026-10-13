@@ -36,15 +36,21 @@ export const KAYKIT_MEDIUM: RigSpec = {
     idle: [{ name: 'Idle_A' }, { name: 'Idle_B' }],
     walk: [{ name: 'Walking_A' }, { name: 'Walking_B' }, { name: 'Walking_C' }],
     move: [{ name: 'Running_A' }, { name: 'Running_B' }],
-    crouch: { name: 'Crouching' },
+    // `Crouching` e um andar agachado: parado fica no quadro em que as duas
+    // pernas estao dobradas por igual
+    crouch: { name: 'Crouching', from: 0.34, to: 0.34 },
     sneak: { name: 'Sneaking' },
     // Os clipes de golpe duram mais de 1 s e o golpe do jogo, bem menos: o
     // trecho escolhido e so o corte, sem o preparo longo nem a volta
+    // Cada lista e um combo: os golpes saem nesta ordem e dao a volta,
+    // fechando no giro e no talho pulando
     attacks: [
       { name: 'Melee_1H_Attack_Slice_Diagonal', from: 0.15, to: 0.7 },
       { name: 'Melee_1H_Attack_Slice_Horizontal', from: 0.15, to: 0.7 },
-      { name: 'Melee_1H_Attack_Chop', from: 0.15, to: 0.7 },
       { name: 'Melee_1H_Attack_Stab', from: 0.15, to: 0.7 },
+      { name: 'Melee_1H_Attack_Chop', from: 0.15, to: 0.7 },
+      { name: 'Melee_2H_Attack_Spin', from: 0.2, to: 0.75 },
+      { name: 'Melee_1H_Attack_Jump_Chop', from: 0.1, to: 0.75 },
     ],
     // estilo do que esta na mao (`pose.style`): arma de estocar (adaga,
     // varinha), de talhar (machado) e de duas maos (montante, cajado)
@@ -52,15 +58,23 @@ export const KAYKIT_MEDIUM: RigSpec = {
       stab: [
         { name: 'Melee_1H_Attack_Stab', from: 0.15, to: 0.7 },
         { name: 'Melee_1H_Attack_Slice_Diagonal', from: 0.15, to: 0.7 },
+        { name: 'Melee_1H_Attack_Stab', from: 0.15, to: 0.7 },
+        { name: 'Melee_1H_Attack_Slice_Horizontal', from: 0.15, to: 0.7 },
+        { name: 'Melee_2H_Attack_Spin', from: 0.2, to: 0.75 },
+        { name: 'Melee_1H_Attack_Jump_Chop', from: 0.1, to: 0.75 },
       ],
       chop: [
         { name: 'Melee_1H_Attack_Chop', from: 0.15, to: 0.7 },
         { name: 'Melee_1H_Attack_Slice_Horizontal', from: 0.15, to: 0.7 },
+        { name: 'Melee_1H_Attack_Slice_Diagonal', from: 0.15, to: 0.7 },
+        { name: 'Melee_2H_Attack_Spin', from: 0.2, to: 0.75 },
+        { name: 'Melee_1H_Attack_Jump_Chop', from: 0.1, to: 0.75 },
       ],
       two: [
         { name: 'Melee_2H_Attack_Slice', from: 0.15, to: 0.75 },
         { name: 'Melee_2H_Attack_Chop', from: 0.2, to: 0.7 },
         { name: 'Melee_2H_Attack_Stab', from: 0.15, to: 0.7 },
+        { name: 'Melee_2H_Attack_Spin', from: 0.2, to: 0.75 },
       ],
     },
     // golpe de salto: o giro; com arma de uma mao leve, o talho pulando

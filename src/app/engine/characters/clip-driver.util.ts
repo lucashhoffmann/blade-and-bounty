@@ -17,7 +17,8 @@ export type ClipSet = {
   move: Many;
   // andando devagar; sem ele, parado mistura direto com correndo
   walk?: Many;
-  // parado e andando agachado; sem eles vale idle e move
+  // parado e andando agachado; sem eles vale idle e move. `crouch` com
+  // `from` igual a `to` fica parado nesse quadro (clipe que so tem o andar)
   crouch?: ClipRef;
   sneak?: ClipRef;
   // um por jeito de golpear; `pose.swing` escolhe
@@ -173,7 +174,15 @@ export function driveClips(
     going: ClipRef,
     amount: number,
   ): ClipCommand[] => [
-    { name: still.name, weight: 1 - amount, time: null },
+    {
+      name: still.name,
+      weight: 1 - amount,
+      // trecho de um quadro so: pose parada, nao ciclo
+      time:
+        still.from !== undefined && still.from === still.to
+          ? at(still, 0, duration(still.name))
+          : null,
+    },
     { name: going.name, weight: amount, time: null },
   ];
   let cycles: ClipCommand[];

@@ -79,6 +79,8 @@ import {
   PROP_IGNORE_CHANCE,
   PROP_REMARK_TIME,
   SEARCH_TIME,
+  SUSPECT_SPEED,
+  SUSPECT_STOP,
   DAGGER_DAMAGE,
   DAGGER_FIRST,
   DAGGER_FROM_LEVEL,
@@ -356,6 +358,26 @@ function witness(world: World, enemy: Enemy): void {
   if (enemy.state === 'alert') return;
   enemy.heard = { ...corpse.pos };
   enemy.searchTimer = SEARCH_TIME * enemy.intelligence.hearing;
+  enemy.route = [];
+  enemy.repathTimer = 0;
+}
+
+// De olho no player, ainda sem certeza: anda devagar na direcao dele para ver
+// melhor. Em linha reta: ha visao, entao nao ha parede no caminho. Guarda de
+// bau tambem sai do posto; sem o player a vista, a ronda leva de volta.
+function approach(world: World, enemy: Enemy, dt: number): void {
+  const gap = distance(enemy.pos, world.player.pos);
+  if (gap <= SUSPECT_STOP) return;
+  const step = (ENEMY_KINDS[enemy.kind].patrolSpeed * SUSPECT_SPEED * dt) / gap;
+  moveCircle(
+    world,
+    enemy.pos,
+    (world.player.pos.x - enemy.pos.x) * step,
+    (world.player.pos.y - enemy.pos.y) * step,
+    ENEMY_RADIUS,
+    doorsSealed(world),
+  );
+  // o caminho de ronda guardado ja nao parte de onde ele esta
   enemy.route = [];
   enemy.repathTimer = 0;
 }
@@ -750,6 +772,7 @@ export function updateEnemies(world: World, dt: number): void {
       enemy.detection = Math.min(1, enemy.detection + dt / enemy.detectTime);
       enemy.facing = angleTo(enemy.pos, world.player.pos);
       enemy.state = 'suspicious';
+      approach(world, enemy, dt);
       continue;
     }
     enemy.detection = Math.max(0, enemy.detection - dt * DETECT_DECAY);

@@ -9,7 +9,7 @@ import {
 } from '@/app/modules/shop/systems/shop.system';
 import { createArenaWorld } from '@/test/world.fixture';
 import type { Hud as HudData } from '@/app/store/game-store/game.store';
-import { useGameStore } from '@/app/store/game-store/game.store';
+import { getWorld, useGameStore } from '@/app/store/game-store/game.store';
 import { GameOverDialog } from '@/resources/pages/game/components/game-over-dialog.component';
 import { Hud } from '@/resources/pages/game/components/hud.component';
 import { LegendDialog } from '@/resources/pages/game/components/legend-dialog.component';
@@ -576,6 +576,21 @@ describe('GamePage', () => {
     });
   });
 
+  it('no celular (toque) nao ha botao de tela cheia', () => {
+    const real = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(pointer: coarse)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    render(<GamePage />);
+    act(() => useGameStore.getState().startRun(1));
+    expect(
+      screen.queryByRole('button', { name: 'Tela cheia' }),
+    ).not.toBeInTheDocument();
+    window.matchMedia = real;
+  });
+
   it('pausa mostra a legenda como Pausado e Continuar retoma', async () => {
     render(<GamePage />);
     act(() => useGameStore.getState().begin());
@@ -599,6 +614,49 @@ describe('GamePage', () => {
 
     expect(useGameStore.getState().screen).toBe('intro');
     expect(screen.getByText('Como jogar')).toBeInTheDocument();
+  });
+
+  it('tutorial: troca a legenda pelo guia, Comecar solta o jogo e Pular encerra', async () => {
+    act(() => useGameStore.getState().startTutorial());
+    render(<GamePage />);
+    expect(screen.queryByText('Como jogar')).not.toBeInTheDocument();
+    expect(screen.getByText('Bem-vindo à masmorra')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Comecar' }));
+    expect(useGameStore.getState().screen).toBe('playing');
+    // o passo seguinte chega quando o guia confere o mundo
+    await screen.findByText('Ande', undefined, { timeout: 1000 });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pular tutorial' }),
+    );
+    expect(useGameStore.getState().tutorial).toBe(false);
+    expect(screen.queryByRole('dialog', { name: 'Tutorial' })).toBeNull();
+    expect(useGameStore.getState().screen).toBe('playing');
+  });
+
+  it('tutorial: no fim, Play comeca uma run de verdade', async () => {
+    act(() => useGameStore.getState().startTutorial());
+    render(<GamePage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Comecar' }));
+    const world = getWorld()!;
+    world.run.roomIndex = 2;
+    world.run.kills = 1;
+    world.player.money = 5;
+    world.player.crouching = true;
+    world.player.dash = 1;
+    world.player.pos.y += 5;
+    world.enemies.push({
+      ...world.enemies[0],
+      kind: 'boss',
+      state: 'dead',
+    });
+    await screen.findByText('Pronto para a caçada', undefined, {
+      timeout: 1000,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(useGameStore.getState().tutorial).toBe(false);
+    expect(useGameStore.getState().screen).toBe('intro');
   });
 
   it('abre loja e game over conforme a tela do store', () => {

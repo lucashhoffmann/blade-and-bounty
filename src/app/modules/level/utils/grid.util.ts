@@ -31,6 +31,8 @@ import {
   SHOP_EVERY,
   SHIELD_MAX,
   SHIELD_MIN,
+  isTutorial,
+  TUTORIAL_BOSS_ROOM,
 } from '@/app/modules/world/constants/world.constants';
 import type {
   Enemy,
@@ -100,6 +102,8 @@ export function tileCenter(roomIndex: number, col: number, row: number): Vec2 {
 
 // Arena do chefe: a ultima sala antes do mercador, a cada BOSS_EVERY cacadas.
 export function isBossRoom(index: number): boolean {
+  // tutorial: a arena e a terceira sala, e a unica
+  if (isTutorial()) return index === TUTORIAL_BOSS_ROOM;
   return (
     index > 0 &&
     index % SHOP_EVERY === SHOP_EVERY - 1 &&

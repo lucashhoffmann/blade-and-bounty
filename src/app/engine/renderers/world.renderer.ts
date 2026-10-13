@@ -163,8 +163,10 @@ const CHASE_TALK_TURN = 1.3;
 const TALK_LINES = ['...', '?', 'zzz', '$$$', 'hm', '!', 'ha ha', 'psiu'];
 const BUBBLE_FONT = "900 64px 'Alegreya Sans', system-ui, sans-serif";
 const BUBBLE_CANVAS = [256, 176];
-const BUBBLE_SIZE = [1.05, 0.72];
-const BUBBLE_Y = 2.25;
+// tamanho do balao de fala curta; frase comprida alarga o balao (a letra nao
+// encolhe)
+const BUBBLE_SIZE = [1.4, 0.96];
+const BUBBLE_Y = 2.45;
 // distancia de cada meia-lua da marca de raiva ate o centro dela
 const RAGE_MOON_GAP = 0.2;
 // marca de raiva do inimigo em furia: tamanho em relacao a exclamacao
@@ -757,10 +759,21 @@ export function createWorldRenderer(
   scene: THREE.Scene,
   look: PlayerLook,
   bloodColor: string,
+  showCrows = true,
 ): WorldRenderer {
   const geo = {
     wall: new THREE.BoxGeometry(1, WALL_HEIGHT, 1),
     floor: new THREE.PlaneGeometry(ROOM_W, ROOM_H),
+    crowBody: new THREE.SphereGeometry(1, 8, 6),
+    crowBeak: new THREE.ConeGeometry(0.055, 0.15, 4).rotateX(-Math.PI / 2),
+    crowWing: new THREE.ShapeGeometry(
+      new THREE.Shape([
+        new THREE.Vector2(0, 0),
+        new THREE.Vector2(0.42, 0.05),
+        new THREE.Vector2(0.65, 0.22),
+        new THREE.Vector2(0.18, 0.28),
+      ]),
+    ).rotateX(-Math.PI / 2),
     // chama da tocha de parede
     torchFlame: new THREE.ConeGeometry(0.07, 0.22, 6),
     // luz da tocha no chao: disco deitado
@@ -841,6 +854,12 @@ export function createWorldRenderer(
     streak: new THREE.BoxGeometry(0.5, 0.02, 0.03),
   };
   const mat = {
+    crow: new THREE.MeshLambertMaterial({
+      color: 0x161820,
+      flatShading: true,
+      side: THREE.DoubleSide,
+    }),
+    crowBeak: lambert(0x696c70),
     chestLight: lambert(COLORS.model.cdcb980),
     chestLock: lambert(COLORS.model.c9aa0aa),
     doorFrame: lambert(COLORS.model.cd4d6da),
@@ -1053,6 +1072,10 @@ export function createWorldRenderer(
   }
 
   const rooms = new Map<number, THREE.Group>();
+  const crows = new Map<
+    number,
+    { body: THREE.Group; wings: [THREE.Group, THREE.Group] }[]
+  >();
   // Kit de cenario (SCENERY): piso, parede, caixas, baus e moedas de modelo.
   // Enquanto o arquivo nao chega, e para sempre se nao chegar, vale o cenario
   // de caixas e papel de parede.
@@ -1387,6 +1410,42 @@ export function createWorldRenderer(
 
   function buildRoom(room: Room): THREE.Group {
     const group = new THREE.Group();
+    if (
+      showCrows &&
+      room.kind === 'combat' &&
+      spotHash(room.index, 2, 5) % 3 === 0
+    ) {
+      const flock: { body: THREE.Group; wings: [THREE.Group, THREE.Group] }[] =
+        [];
+      for (let i = 0; i < 1 + (spotHash(room.index, 3, 1) % 2); i++) {
+        const body = new THREE.Group();
+        body.name = 'crow';
+        const torso = new THREE.Mesh(geo.crowBody, mat.crow);
+        torso.scale.set(0.17, 0.11, 0.27);
+        body.add(torso);
+        const head = new THREE.Mesh(geo.crowBody, mat.crow);
+        head.scale.setScalar(0.12);
+        head.position.z = -0.25;
+        body.add(head);
+        const beak = new THREE.Mesh(geo.crowBeak, mat.crowBeak);
+        beak.position.z = -0.39;
+        body.add(beak);
+        const wings = [new THREE.Group(), new THREE.Group()] as [
+          THREE.Group,
+          THREE.Group,
+        ];
+        wings.forEach((wing, side) => {
+          wing.name = 'crowWing';
+          wing.position.x = side ? -0.1 : 0.1;
+          wing.scale.x = side ? -1 : 1;
+          wing.add(new THREE.Mesh(geo.crowWing, mat.crow));
+          body.add(wing);
+        });
+        group.add(body);
+        flock.push({ body, wings });
+      }
+      crows.set(room.index, flock);
+    }
     // um contrato = um nivel: SHOP_EVERY salas com a mesma parede e piso
     const level = Math.max(0, Math.floor((room.index - 1) / SHOP_EVERY));
     let papers = wallpapers.get(level);
@@ -1675,6 +1734,9 @@ export function createWorldRenderer(
 
   function removeRoom(group: THREE.Group) {
     scene.remove(group);
+    for (const [index, flock] of crows) {
+      if (flock[0]?.body.parent === group) crows.delete(index);
+    }
     group.traverse((child) => {
       if (child instanceof THREE.InstancedMesh) child.dispose();
     });
@@ -2202,9 +2264,6 @@ export function createWorldRenderer(
       ear,
       rage,
       enraged: false,
-      noticed: [],
-      remark: 0,
-      remarkOn: 0,
       bubble: null,
       said: '',
       cone,
@@ -2262,12 +2321,19 @@ export function createWorldRenderer(
     const cached = bubbleTextures.get(text);
     if (cached) return cached;
     const canvas = document.createElement('canvas');
-    [canvas.width, canvas.height] = BUBBLE_CANVAS;
     const context = canvas.getContext('2d');
     // sem canvas 2D (jsdom) nao ha como desenhar
     if (!context) return null;
-    const [w, h] = BUBBLE_CANVAS;
+    const [base, h] = BUBBLE_CANVAS;
     const [pad, tail, radius] = [10, 34, 30];
+    // a letra tem sempre o mesmo tamanho: frase comprida alarga o balao.
+    // Mudar o tamanho do canvas limpa o estado dele; a fonte volta depois
+    context.font = BUBBLE_FONT;
+    const w = Math.max(
+      base,
+      Math.ceil(context.measureText(text).width) + pad * 6,
+    );
+    [canvas.width, canvas.height] = [w, h];
     context.lineJoin = 'round';
     context.lineWidth = 10;
     context.strokeStyle = '#14141f';
@@ -2275,16 +2341,17 @@ export function createWorldRenderer(
     // corpo arredondado com o rabicho embaixo, apontando para quem fala
     context.beginPath();
     context.roundRect(pad, pad, w - pad * 2, h - pad * 2 - tail, radius);
-    context.moveTo(w * 0.34, h - pad - tail - 2);
-    context.lineTo(w * 0.28, h - pad);
-    context.lineTo(w * 0.5, h - pad - tail - 2);
+    // rabicho sempre no mesmo lugar, perto da ponta esquerda
+    context.moveTo(base * 0.34, h - pad - tail - 2);
+    context.lineTo(base * 0.28, h - pad);
+    context.lineTo(base * 0.5, h - pad - tail - 2);
     context.stroke();
     context.fill();
     context.font = BUBBLE_FONT;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = '#14141f';
-    context.fillText(text, w / 2, (h - tail) / 2 + 2, w - pad * 5);
+    context.fillText(text, w / 2, (h - tail) / 2 + 2);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     bubbleTextures.set(text, texture);
@@ -2318,8 +2385,14 @@ export function createWorldRenderer(
     view.bubble.visible = true;
     // quica de leve, como quem fala
     const bounce = 1 + Math.sin(time * 10) * 0.05;
-    view.bubble.scale.set(BUBBLE_SIZE[0] * bounce, BUBBLE_SIZE[1] * bounce, 1);
-    view.bubble.position.set(0.35, BUBBLE_Y, 0);
+    // largura pela da textura (frase comprida e mais larga); a ponta esquerda,
+    // onde fica o rabicho, nao sai do lugar
+    const image = view.bubble.material.map?.image as
+      { width: number } | undefined;
+    const width =
+      (BUBBLE_SIZE[0] * (image?.width ?? BUBBLE_CANVAS[0])) / BUBBLE_CANVAS[0];
+    view.bubble.scale.set(width * bounce, BUBBLE_SIZE[1] * bounce, 1);
+    view.bubble.position.set(0.35 + (width - BUBBLE_SIZE[0]) / 2, BUBBLE_Y, 0);
   }
 
   // Conversa: dois inimigos calmos a menos de TALK_RANGE um do outro se
@@ -2357,6 +2430,14 @@ export function createWorldRenderer(
     if (enemy.remark <= 0 || enemy.state === 'alert') return null;
     const lines = getTexts().game.brokenLines;
     return lines[(enemy.remarkOn + enemy.id) % lines.length];
+  }
+
+  // De olho no player (marca amarela, `detection` enchendo): estranha em voz
+  // alta, uma fala por inimigo
+  function suspect(enemy: Enemy): string | null {
+    if (enemy.state !== 'suspicious' || enemy.detection <= 0) return null;
+    const lines = getTexts().game.suspectLines;
+    return lines[enemy.id % lines.length];
   }
 
   // Perseguicao: quem esta em alerta grita de vez em quando. Cada inimigo tem
@@ -2516,9 +2597,6 @@ export function createWorldRenderer(
     const view: PlayerView = {
       rage,
       enraged: false,
-      noticed: [],
-      remark: 0,
-      remarkOn: 0,
       jumper,
       held: createHeldGuns(jumper.character, look.weapon),
       flash,
@@ -2814,6 +2892,24 @@ export function createWorldRenderer(
         if (!rooms.has(room.index)) rooms.set(room.index, buildRoom(room));
       }
       reconcile(rooms, new Set(world.rooms.map((r) => r.index)), removeRoom);
+      for (const [index, flock] of crows) {
+        flock.forEach(({ body, wings }, i) => {
+          const angle = time * (0.9 + i * 0.15) + spotHash(index, i, 3) * 0.01;
+          const radiusX = 1.4 + i * 0.45;
+          const radiusZ = 1 + i * 0.3;
+          body.position.set(
+            ROOM_W / 2 + Math.cos(angle) * radiusX,
+            1.7 + Math.sin(time * 2 + i) * 0.12,
+            -(index + 0.5) * ROOM_H - Math.sin(angle) * radiusZ,
+          );
+          body.rotation.y = Math.atan2(
+            radiusX * Math.sin(angle),
+            radiusZ * Math.cos(angle),
+          );
+          wings[0].rotation.z = 0.25 + Math.sin(time * 11 + i) * 0.65;
+          wings[1].rotation.z = -wings[0].rotation.z;
+        });
+      }
       for (const index of chestLids.keys()) {
         if (!rooms.has(index)) chestLids.delete(index);
       }
@@ -3099,6 +3195,7 @@ export function createWorldRenderer(
           dead
             ? null
             : (remark(enemy) ??
+                suspect(enemy) ??
                 chatter(world, enemy, time) ??
                 taunt(enemy, time)),
           time,

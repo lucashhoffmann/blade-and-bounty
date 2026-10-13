@@ -18,6 +18,18 @@ export let ROOM_H: number = ROOM_SIZES.solo[1];
 export function setRoomSize(mode: keyof typeof ROOM_SIZES): void {
   [ROOM_W, ROOM_H] = ROOM_SIZES[mode];
 }
+// Tutorial guiado: ambiente controlado de 3 salas (inicial, 1 inimigo, chefe)
+// em que o player nao morre. Flag de modulo como o tamanho da sala: o store
+// liga antes de criar o World e desliga em toda run comum.
+// ponytail: flag global; se o tutorial precisar de mais regra, vai para o World
+let tutorial = false;
+export function setTutorial(on: boolean): void {
+  tutorial = on;
+}
+export function isTutorial(): boolean {
+  return tutorial;
+}
+export const TUTORIAL_BOSS_ROOM = 2;
 export const ROOMS_AHEAD = 1;
 export const ROOMS_BEHIND = 1;
 // um contrato = SHOP_EVERY salas, a ultima e a loja
@@ -295,6 +307,11 @@ export const HEAR_PER_ROOM = 0.05;
 export const HEAR_MAX_BONUS = 0.5;
 // quanto tempo investiga o barulho antes de voltar a patrulha
 export const SEARCH_TIME = 4;
+// De olho no player (`suspicious` por visao, marca amarela): em vez de ficar
+// parado, chega mais perto para ver melhor, a SUSPECT_SPEED da velocidade de
+// ronda, ate SUSPECT_STOP tiles dele
+export const SUSPECT_SPEED = 0.6;
+export const SUSPECT_STOP = 2;
 // Objeto quebrado a vista (notice, em enemy.system): PROP_IGNORE_CHANCE das
 // vezes o inimigo nem repara; senao comenta (balao por PROP_REMARK_TIME
 // segundos) e vai ate la conferir, como faz com barulho

@@ -244,6 +244,11 @@ Estados:
 - conversa: so visual, na engine. Dois inimigos em `patrol`, sem furia, a
   menos de `TALK_RANGE` um do outro se revezam com um balao de fala sobre a
   cabeca (`chatter`, em `world.renderer.ts`)
+- de olho no player (`approach`): `suspicious` por visao (player no cone,
+  `detection` enchendo) nao fica parado: anda em linha reta na direcao dele a
+  `SUSPECT_SPEED` da velocidade de ronda, ate `SUSPECT_STOP` tiles. Vale para
+  guarda de bau (`patrol` de um ponto): sem o player a vista, a ronda leva de
+  volta ao posto. A engine mostra no balao uma das `game.suspectLines`
 - objeto quebrado (`notice`, em `updateEnemies`): inimigo calmo, sem nada a
   conferir, que ve (`canSee`) um `Prop` quebrado da propria sala ainda fora
   de `Enemy.noticed` anota o `id` e sorteia (`rngState`): `PROP_IGNORE_CHANCE`
@@ -800,9 +805,11 @@ hud: {
 }
 market: Market;
 best: number; // maior sala alcancada, persistido em localStorage
+tutorial: boolean; // a run atual e o tutorial guiado: 3 salas (inicial, 1 arqueiro, chefe), sem morte nem inatividade (`setTutorial` em world.constants, lido por level e world.system)
+tutorialDone: boolean; // ja viu um tutorial; persistido. Sem ele, o Play da home abre o tutorial
 look: PlayerLook; // aparencia do player, persistida em localStorage
 bloodColor: string; // cor das pocas, persistida em localStorage
-// graficos, persistidos: quality 'high' | 'medium' | 'low', blur boolean
+// graficos, persistidos: quality 'high' | 'medium' | 'low', blur e crows boolean
 graphics: Graphics;
 setGraphics: (patch: Partial<Graphics>) => void;
 idleWarnings: number; // pulsos azuis da run atual, nao persistido
@@ -831,27 +838,30 @@ criar o renderer (vale a partir da proxima partida). `quality` e o teto de
 pixels por ponto da tela (`high` 2, `medium` 1.5, `low` 1; no `low` tambem
 sem antialias); `blur` liga o desfoque de CSS do canvas (salto, golpe,
 perseguicao). Padrao: `high` no computador, `medium` em aparelho de toque,
-`blur` ligado. `setGraphics` ignora valor invalido.
+`blur` e `crows` ligados. `crows` controla os corvos decorativos em algumas
+salas de combate. `setGraphics` ignora valor invalido.
 `bloodColor` e uma cor `#rrggbb` escolhida nas configuracoes da home. O
 renderer a le ao abrir a run; a poca sob cada inimigo morto cresce suavemente
 por `BLOOD_GROW_TIME` segundos ate um tamanho fixo.
 
 Acoes:
 
-| Acao                   | Quem chama | Efeito                                  |
-| ---------------------- | ---------- | --------------------------------------- |
-| `startRun(seed?)`      | UI         | cria `World` em `intro`                 |
-| `begin()`              | UI, engine | `intro` -> `playing`                    |
-| `togglePause()`        | UI, engine | `playing` <-> `paused`                  |
-| `tick(input, dt)`      | engine     | `stepWorld` e sincroniza `hud`/`screen` |
-| `buy(itemId)`          | UI         | `buyItem` e sincroniza                  |
-| `selectWeapon(id)`     | UI         | troca a arma na mao; null = espada      |
-| `cycleWeapon()`        | engine (Q) | proxima arma; so em `playing`           |
-| `closeShop()`          | UI, engine | volta para `playing`                    |
-| `backToMenu()`         | UI         | descarta `World`, `screen = 'menu'`     |
-| `openCharacter()`      | UI (menu)  | `screen = 'character'`; em run, nada    |
-| `setLook(patch)`       | UI         | valida e grava `look`; em run, nada     |
-| `setBloodColor(color)` | UI         | valida e grava a cor do sangue          |
+| Acao                   | Quem chama | Efeito                                        |
+| ---------------------- | ---------- | --------------------------------------------- |
+| `startRun(seed?)`      | UI         | cria `World` em `intro`                       |
+| `startTutorial()`      | UI (menu)  | `startRun` + `tutorial`; marca `tutorialDone` |
+| `finishTutorial()`     | UI         | tira o guia; a run segue                      |
+| `begin()`              | UI, engine | `intro` -> `playing`                          |
+| `togglePause()`        | UI, engine | `playing` <-> `paused`                        |
+| `tick(input, dt)`      | engine     | `stepWorld` e sincroniza `hud`/`screen`       |
+| `buy(itemId)`          | UI         | `buyItem` e sincroniza                        |
+| `selectWeapon(id)`     | UI         | troca a arma na mao; null = espada            |
+| `cycleWeapon()`        | engine (Q) | proxima arma; so em `playing`                 |
+| `closeShop()`          | UI, engine | volta para `playing`                          |
+| `backToMenu()`         | UI         | descarta `World`, `screen = 'menu'`           |
+| `openCharacter()`      | UI (menu)  | `screen = 'character'`; em run, nada          |
+| `setLook(patch)`       | UI         | valida e grava `look`; em run, nada           |
+| `setBloodColor(color)` | UI         | valida e grava a cor do sangue                |
 
 Fora do estado reativo:
 

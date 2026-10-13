@@ -8,6 +8,7 @@ import {
 } from '@/app/modules/world/constants/world.constants';
 import {
   DEFAULT_BLOOD_COLOR,
+  DEFAULT_GRAPHICS,
   DEFAULT_LOOK,
   getWorld,
   LOOK_SCALE,
@@ -193,6 +194,29 @@ describe('game store', () => {
     ).toBe('#22aa44');
     store().setBloodColor('verde');
     expect(store().bloodColor).toBe('#22aa44');
+  });
+
+  it('salva a opção dos corvos e aceita gráficos antigos sem ela', async () => {
+    store().setGraphics({ crows: false });
+    expect(
+      JSON.parse(localStorage.getItem('blade-and-bounty')!).state.graphics
+        .crows,
+    ).toBe(false);
+
+    useGameStore.setState({ graphics: DEFAULT_GRAPHICS });
+    localStorage.setItem(
+      'blade-and-bounty',
+      JSON.stringify({
+        state: { graphics: { quality: 'low', blur: false } },
+        version: 0,
+      }),
+    );
+    await useGameStore.persist.rehydrate();
+    expect(store().graphics).toEqual({
+      quality: 'low',
+      blur: false,
+      crows: true,
+    });
   });
 
   it('salva os perfis de inteligencia em JSON e os reutiliza em outra run', () => {

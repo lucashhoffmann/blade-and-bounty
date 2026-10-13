@@ -14,6 +14,7 @@ import {
   BRUTE_SPREAD,
   FIRE_DELAY,
   FIXED_DT,
+  SUSPECT_STOP,
   HEARING_YELLOW,
   LAUNCH_DISTANCE,
   LAUNCH_TIME,
@@ -111,13 +112,19 @@ describe('updateEnemies', () => {
     const world = createArenaWorld();
     const enemy = addEnemy(world, 5.5, 5.5, -Math.PI / 2);
     run(world, DETECT_TIME / 2);
+    // de olho no player, chegou mais perto para ver melhor
+    expect(enemy.pos.y).toBeLessThan(5.5);
+    expect(enemy.pos.y).toBeGreaterThan(2.5 + SUSPECT_STOP - 0.01);
 
-    world.player.pos = { x: 5.5, y: 9.5 };
+    // some para um canto as costas de quem volta ao posto
+    world.player.pos = { x: 1.5, y: 1.5 };
     run(world, 0.2);
     expect(enemy.state).toBe('suspicious');
     run(world, 2);
     expect(enemy.state).toBe('patrol');
     expect(enemy.detection).toBe(0);
+    // e a ronda leva de volta ao posto
+    expect(enemy.pos.y).toBeCloseTo(5.5, 0);
   });
 
   it('archer em alerta dispara flechas na direcao do player', () => {

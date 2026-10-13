@@ -45,6 +45,7 @@ import {
   ROOMS_PER_EXTRA_ENEMY,
   SHOP_EVERY,
   TILE_MONEY,
+  isTutorial,
 } from '@/app/modules/world/constants/world.constants';
 import type {
   EnemyKind,
@@ -75,6 +76,8 @@ export function pickTemplate(world: World, index: number): RoomTemplate {
   const { start, shop, boss, combat } = TEMPLATES[world.mode];
   if (index === 0) return start;
   if (isBossRoom(index)) return boss;
+  // tutorial: sala 1 e sempre a mesma; depois da arena so sala vazia
+  if (isTutorial()) return index === 1 ? combat[0] : start;
   if (index % SHOP_EVERY === 0) return shop;
   return combat[Math.floor(nextRandom(world) * combat.length)];
 }
@@ -140,6 +143,31 @@ export function bossMaxHp(index: number): number {
   );
 }
 
+// caixas, mobilia e dinheiro marcados no template
+function spawnProps(world: World, index: number, template: RoomTemplate): void {
+  template.tiles.forEach((line, row) => {
+    for (let col = 0; col < line.length; col++) {
+      if (line[col] === 'o' || isFurniture(line[col])) {
+        world.props.push({
+          id: world.nextId++,
+          roomIndex: index,
+          pos: tileCenter(index, col, row),
+          broken: false,
+          ...(line[col] === 'o' ? {} : { furniture: line[col] }),
+        });
+      }
+      if (line[col] !== '$') continue;
+      world.pickups.push({
+        id: world.nextId++,
+        kind: 'money',
+        roomIndex: index,
+        pos: tileCenter(index, col, row),
+        value: TILE_MONEY,
+      });
+    }
+  });
+}
+
 export function spawnRoom(
   world: World,
   index: number,
@@ -147,7 +175,8 @@ export function spawnRoom(
 ): void {
   // Antes da arena do chefe: dois baus de compra colados na parede do fundo,
   // um de cada lado da porta, sem guarda. E a chance de se preparar
-  const armory = template.kind === 'combat' && isBossRoom(index + 1);
+  const armory =
+    template.kind === 'combat' && isBossRoom(index + 1) && !isTutorial();
   const tiles = [...template.tiles];
   if (armory) {
     const middle = Math.floor(ROOM_W / 2);
@@ -191,6 +220,8 @@ export function spawnRoom(
     return;
   }
 
+  const route = (i: number) =>
+    template.enemies[i].path.map(([col, row]) => tileCenter(index, col, row));
   // multiplayer: mais inimigos por sala e dificuldade adiantada
   const threat = index + threatBoost(world);
   const enemyCount = Math.min(
@@ -199,8 +230,14 @@ export function spawnRoom(
       (1 + Math.floor(threat / ROOMS_PER_EXTRA_ENEMY)) * enemyMultiplier(world),
     ),
   );
-  const route = (i: number) =>
-    template.enemies[i].path.map(([col, row]) => tileCenter(index, col, row));
+  // tutorial: um arqueiro sozinho, para aprender o golpe pelas costas
+  if (isTutorial()) {
+    if (template.enemies.length > 0) {
+      world.enemies.push(createEnemy(world, index, route(0), 'archer'));
+    }
+    spawnProps(world, index, template);
+    return;
+  }
   // rondas do template que sobraram: viram o caminho extra das duplas
   const spare = template.enemies
     .slice(enemyCount)
@@ -245,27 +282,7 @@ export function spawnRoom(
     spawned++;
   }
 
-  template.tiles.forEach((line, row) => {
-    for (let col = 0; col < line.length; col++) {
-      if (line[col] === 'o' || isFurniture(line[col])) {
-        world.props.push({
-          id: world.nextId++,
-          roomIndex: index,
-          pos: tileCenter(index, col, row),
-          broken: false,
-          ...(line[col] === 'o' ? {} : { furniture: line[col] }),
-        });
-      }
-      if (line[col] !== '$') continue;
-      world.pickups.push({
-        id: world.nextId++,
-        kind: 'money',
-        roomIndex: index,
-        pos: tileCenter(index, col, row),
-        value: TILE_MONEY,
-      });
-    }
-  });
+  spawnProps(world, index, template);
 
   // bau da loja tem guarda
   const chest = world.rooms[world.rooms.length - 1].chest;

@@ -102,12 +102,9 @@ describe('golpes de espada variados', () => {
     return used;
   }
 
-  it('cada golpe novo usa um jeito diferente do anterior', () => {
+  it('cada golpe novo e o proximo da sequencia, sempre na mesma ordem', () => {
     const used = swings(60);
-    expect(used[0]).toBe(0);
-    for (let i = 1; i < used.length; i++) expect(used[i]).not.toBe(used[i - 1]);
-    // em 60 golpes aparecem todos
-    expect(new Set(used).size).toBe(SWINGS.length);
+    used.forEach((swing, i) => expect(swing).toBe(i));
   });
 
   it('os jeitos sao mesmo diferentes: lado do corte, altura do braco, volta inteira', () => {
@@ -155,7 +152,7 @@ it('golpe de salto e sempre o giro, mesmo sendo o primeiro golpe', () => {
   const character = createCharacterKit(DEFAULT_LOOK).make('player');
   for (let i = 0; i < 10; i++) {
     poseAttack(character, SLASH_TIME, true);
-    expect(SWINGS[character.swing].spin).toBeGreaterThan(0);
+    expect(SWINGS[character.swing % SWINGS.length].spin).toBeGreaterThan(0);
     poseAttack(character, 0);
   }
 });

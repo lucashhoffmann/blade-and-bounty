@@ -43,6 +43,7 @@ import {
   setRoomSize,
   SLASH_TIME,
   STREAK_NEVER,
+  isTutorial,
 } from '@/app/modules/world/constants/world.constants';
 import type {
   AttackVariance,
@@ -308,13 +309,18 @@ export function stepWorld(world: World, input: InputState, dt: number): void {
   const before = { ...world.player.pos };
   movePlayer(world, input, dt);
   updateRooms(world);
-  updateIdlePressure(world, before);
+  // tutorial: ninguem e mandado atras de quem parou para ler
+  if (!isTutorial()) updateIdlePressure(world, before);
   updateEnemies(world, dt);
   fight(world, input, dt);
   updateProjectiles(world, dt);
   updateFloaters(world, dt);
   collectPickups(world);
   if (input.open) openChest(world);
+  // tutorial: no lugar de morrer, a vida volta cheia
+  if (world.player.hp <= 0 && isTutorial()) {
+    world.player.hp = world.player.maxHp;
+  }
   if (world.player.hp <= 0 && world.run.revives > 0) revive(world);
   if (world.player.hp <= 0) {
     world.status = 'dead';

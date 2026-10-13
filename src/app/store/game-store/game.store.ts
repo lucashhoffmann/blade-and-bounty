@@ -57,6 +57,7 @@ import {
   ROOM_H,
   ROOM_W,
   setRoomSize,
+  setTutorial,
   STREAK_NEVER,
   SHOP_EVERY,
 } from '@/app/modules/world/constants/world.constants';
@@ -192,9 +193,13 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 
 // Graficos, escolhidos nas configuracoes da home. `quality` muda quantos
 // pixels a engine desenha (e o serrilhado, no baixo); `blur` liga o desfoque
-// de salto, golpe e perseguicao.
+// de salto, golpe e perseguicao; `crows` controla os corvos decorativos.
 export type GraphicsQuality = 'high' | 'medium' | 'low';
-export type Graphics = { quality: GraphicsQuality; blur: boolean };
+export type Graphics = {
+  quality: GraphicsQuality;
+  blur: boolean;
+  crows: boolean;
+};
 export const GRAPHICS_QUALITIES: GraphicsQuality[] = ['high', 'medium', 'low'];
 // celular comeca no medio: tela densa, GPU mais fraca
 export const DEFAULT_GRAPHICS: Graphics = {
@@ -203,15 +208,17 @@ export const DEFAULT_GRAPHICS: Graphics = {
       ? 'medium'
       : 'high',
   blur: true,
+  crows: true,
 };
 // valor salvo ou vindo da tela: so entra o que e valido
 function mergeGraphics(current: Graphics, patch: unknown): Graphics {
-  const { quality, blur } = (patch ?? {}) as Partial<Graphics>;
+  const { quality, blur, crows } = (patch ?? {}) as Partial<Graphics>;
   return {
     quality: GRAPHICS_QUALITIES.includes(quality as GraphicsQuality)
       ? (quality as GraphicsQuality)
       : current.quality,
     blur: typeof blur === 'boolean' ? blur : current.blur,
+    crows: typeof crows === 'boolean' ? crows : current.crows,
   };
 }
 
@@ -346,7 +353,14 @@ type GameStore = {
   receiveInput: (index: number, payload: unknown) => void;
   // convidado: chegou o estado do mundo
   receiveState: (snapshot: Snapshot) => void;
-  startRun: (seed?: number) => void;
+  startRun: (seed?: number, tutorial?: boolean) => void;
+  // tutorial guiado: `tutorial` e a run atual; `tutorialDone` (persistido)
+  // diz se o jogador ja viu um, para o Play nao forcar outro
+  tutorial: boolean;
+  tutorialDone: boolean;
+  startTutorial: () => void;
+  // some o guia e a run segue normal
+  finishTutorial: () => void;
   begin: () => void;
   togglePause: () => void;
   tick: (input: InputState, dt: number) => void;
@@ -670,6 +684,7 @@ export const useGameStore = create<GameStore>()(
           };
           sentScores = '';
           set({ online: true, host: link.host, menu: false, scores: [] });
+          setTutorial(false);
           setJoystickInput(0, 0);
           if (link.host) {
             world = createMultiWorld(seed, seats);
@@ -698,7 +713,7 @@ export const useGameStore = create<GameStore>()(
           sync();
         },
         // toda run abre na legenda; `begin` solta a simulacao
-        startRun: (seed = Date.now()) => {
+        startRun: (seed = Date.now(), tutorial = false) => {
           multi?.leave();
           multi = null;
           sentScores = '';
@@ -706,13 +721,26 @@ export const useGameStore = create<GameStore>()(
             online: false,
             host: false,
             menu: false,
+            tutorial,
             streak: { count: 0, at: STREAK_NEVER },
           });
+          // antes de criar o mundo: muda as salas e tira a morte
+          setTutorial(tutorial);
           world = createWorld(seed, get().intelligence, get().attackVariance);
           world.status = 'intro';
           setJoystickInput(0, 0);
           sync();
         },
+        tutorial: false,
+        tutorialDone: false,
+        // Ambiente controlado de 3 salas com o guia por cima (world.constants).
+        // Comecar ja conta como visto: quem sai no meio nao e obrigado de
+        // novo (o botao da home refaz)
+        startTutorial: () => {
+          get().startRun(Date.now(), true);
+          set({ tutorialDone: true });
+        },
+        finishTutorial: () => set({ tutorial: false }),
         begin: () => {
           if (!world) return;
           beginRun(world);
@@ -794,6 +822,7 @@ export const useGameStore = create<GameStore>()(
             host: false,
             menu: false,
             scoreboard: false,
+            tutorial: false,
             streak: { count: 0, at: STREAK_NEVER },
           });
           set({ screen: 'menu' });
@@ -804,6 +833,7 @@ export const useGameStore = create<GameStore>()(
       name: 'blade-and-bounty',
       partialize: (state) => ({
         best: state.best,
+        tutorialDone: state.tutorialDone,
         // a carteira vai com o selo dela, nao a copia do estado
         wallet: saveWallet(),
         look: state.look,
@@ -816,6 +846,7 @@ export const useGameStore = create<GameStore>()(
       merge: (saved, current) => {
         const {
           best,
+          tutorialDone,
           look,
           bloodColor,
           graphics,
@@ -828,6 +859,7 @@ export const useGameStore = create<GameStore>()(
           // antes do look: `mergeLook` so aceita skin que a carteira tem
           ...restoreWallet(wallet),
           best: best ?? current.best,
+          tutorialDone: tutorialDone === true,
           look: mergeLook(current.look, look ?? {}),
           bloodColor:
             typeof bloodColor === 'string' && COLOR.test(bloodColor)

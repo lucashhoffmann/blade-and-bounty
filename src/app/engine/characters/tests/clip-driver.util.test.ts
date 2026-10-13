@@ -56,6 +56,14 @@ describe('driveClips', () => {
     ).toEqual(['idle', 'run']);
   });
 
+  it('agachado parado segura um quadro quando o clipe e so de andar', () => {
+    const walking = { ...SET, crouch: { name: 'crouch', from: 0.5, to: 0.5 } };
+    expect(drive({ crouching: true, moving: 0 }, 0, walking)).toEqual([
+      { name: 'crouch', weight: 1, time: 1 },
+      { name: 'sneak', weight: 0, time: null },
+    ]);
+  });
+
   it('golpe toca sozinho, no ponto que a fase manda', () => {
     expect(drive({ attack: 0.5, moving: 1 })).toEqual([
       { name: 'slash', weight: 1, time: 1 },
