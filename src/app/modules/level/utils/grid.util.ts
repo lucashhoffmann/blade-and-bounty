@@ -69,9 +69,9 @@ export function isSolidTile(tile: string): boolean {
   );
 }
 
-// Mobilia: mesa ('T'), estante ('S') e barris de enfeite ('B'). Fixa, nao
-// quebra nem solta item. Bloqueia passagem e flecha, mas e baixa: nao bloqueia
-// visao. O pilar ('P') e alto: na simulacao e igual a parede.
+// Mobilia: mesa ('T'), estante ('S') e barris de enfeite ('B'). E um `Prop`
+// como a caixa: bloqueia passagem e flecha, nao visao, e quebra igual; so nao
+// solta item. O pilar ('P') e estrutura: na simulacao e igual a parede.
 export function isFurniture(tile: string): boolean {
   return tile === 'T' || tile === 'S' || tile === 'B';
 }
@@ -446,7 +446,7 @@ export function breakProp(world: World, prop: Prop): void {
   if (prop.broken) return;
   prop.broken = true;
   if (prop.golden) dropGolden(world, prop);
-  else dropLoot(world, prop);
+  else if (!prop.furniture) dropLoot(world, prop);
   const tx = Math.floor(prop.pos.x);
   const ty = Math.floor(prop.pos.y);
   const room = roomAt(world, ty);
@@ -460,7 +460,8 @@ export function breakProp(world: World, prop: Prop): void {
 export function breakPropAt(world: World, x: number, y: number): boolean {
   const tx = Math.floor(x);
   const ty = Math.floor(y);
-  if (tileAt(world, tx, ty) !== 'o') return false;
+  const tile = tileAt(world, tx, ty);
+  if (tile !== 'o' && !isFurniture(tile)) return false;
   const prop = world.props.find(
     (p) =>
       !p.broken && Math.floor(p.pos.x) === tx && Math.floor(p.pos.y) === ty,

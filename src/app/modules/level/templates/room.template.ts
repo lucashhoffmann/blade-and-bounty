@@ -2,8 +2,8 @@ import type { RoomTemplate } from '@/app/modules/world/types/world.types';
 
 // Linha 0 = fundo da sala (saida), ultima linha = entrada.
 // '#' parede, '.' chao, '$' dinheiro, 'C' bau da loja, 'o' caixa destrutivel,
-// 'T' mesa, 'S' estante, 'B' barris de enfeite (mobilia fixa: bloqueia passagem
-// e flecha, nao visao), 'P' pilar (igual a parede).
+// 'T' mesa, 'S' estante, 'B' barris de enfeite (mobilia: quebra como a caixa,
+// sem soltar item), 'P' pilar (igual a parede).
 // Regras em docs/contracts.md; level.test.ts valida todo template.
 
 export const START_TEMPLATE: RoomTemplate = {

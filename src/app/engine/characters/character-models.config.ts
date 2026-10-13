@@ -4,7 +4,10 @@ import {
   KAYKIT_MEDIUM,
 } from '@/app/engine/characters/kaykit.rig';
 import type { EnemyKind } from '@/app/modules/world/types/world.types';
-import type { OutfitId } from '@/app/modules/skins/constants/skins.constants';
+import type {
+  BladeId,
+  OutfitId,
+} from '@/app/modules/skins/constants/skins.constants';
 
 // O unico arquivo desta pasta que sabe que jogo e este: quem usa que modelo.
 // Tipo fora da lista continua com o personagem de pecas
@@ -24,19 +27,49 @@ const AXE = { slot: 'rightHand', url: '/models/kaykit/Skeleton_Axe.gltf' };
 
 // Skins do player: compradas na loja da tela inicial (`look.outfit`,
 // skins.constants). Todos os personagens do kit, do ladino ao esqueleto
-// guerreiro; a simulacao e a mesma para todos.
+// guerreiro; a simulacao e a mesma para todos. O que vai na mao e outra
+// skin, a de arma: ver `playerModel`.
 export const PLAYER_OUTFITS: Record<OutfitId, CharacterModel> = {
-  rogueHooded: { ...kaykit('rogue-hooded'), holds: [SWORD] },
-  rogue: { ...kaykit('rogue'), holds: [SWORD] },
-  mage: { ...kaykit('mage'), holds: [SWORD] },
-  ranger: { ...kaykit('ranger'), holds: [SWORD] },
-  barbarian: { ...kaykit('barbarian'), holds: [SWORD] },
-  knight: { ...kaykit('knight'), holds: [SWORD] },
-  skeletonMinion: { ...kaykit('skeleton-minion'), holds: [BLADE] },
-  skeletonRogue: { ...kaykit('skeleton-rogue'), holds: [BLADE] },
-  skeletonMage: { ...kaykit('skeleton-mage'), holds: [BLADE] },
-  skeletonWarrior: { ...kaykit('skeleton-warrior'), holds: [AXE] },
+  rogueHooded: kaykit('rogue-hooded'),
+  rogue: kaykit('rogue'),
+  mage: kaykit('mage'),
+  ranger: kaykit('ranger'),
+  barbarian: kaykit('barbarian'),
+  knight: kaykit('knight'),
+  skeletonMinion: kaykit('skeleton-minion'),
+  skeletonRogue: kaykit('skeleton-rogue'),
+  skeletonMage: kaykit('skeleton-mage'),
+  skeletonWarrior: kaykit('skeleton-warrior'),
 };
+
+// Skins de arma (`look.blade`): o arquivo do que o player leva na mao no
+// lugar da espada. So desenho.
+export const BLADE_URLS: Record<BladeId, string> = {
+  sword: SWORD.url,
+  dagger: '/models/kaykit/dagger.gltf',
+  axe: '/models/kaykit/axe_1handed.gltf',
+  wand: '/models/kaykit/wand.gltf',
+  skeletonBlade: BLADE.url,
+  staff: '/models/kaykit/staff.gltf',
+  skeletonAxe: AXE.url,
+  greatsword: '/models/kaykit/sword_2handed_color.gltf',
+  greataxe: '/models/kaykit/axe_2handed.gltf',
+  skeletonStaff: '/models/kaykit/Skeleton_Staff.gltf',
+};
+
+// o modelo do player como ele esta vestido: o corpo da skin com a arma
+// escolhida na mao
+export function playerModel(look: {
+  outfit: OutfitId;
+  blade: BladeId;
+}): CharacterModel {
+  return {
+    ...(PLAYER_OUTFITS[look.outfit] ?? PLAYER_OUTFITS.rogueHooded),
+    holds: [
+      { slot: 'rightHand', url: BLADE_URLS[look.blade] ?? BLADE_URLS.sword },
+    ],
+  };
+}
 
 // Cada tipo de inimigo tem uma ou mais caras: a escolha sai do `id` dele, e
 // e so visual (a simulacao trata todos do tipo igual). Quem atira (archer,

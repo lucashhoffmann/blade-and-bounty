@@ -5,7 +5,6 @@ import {
   dropRubies,
   dropLoot,
   hasLineOfSight,
-  isFurniture,
   isSolidTile,
   isWall,
   tileAt,
@@ -469,21 +468,14 @@ export function updateProjectiles(world: World, dt: number): void {
     arrow.pos.y += arrow.vel.y * dt;
     arrow.life -= dt;
     arrow.travelled += Math.hypot(arrow.vel.x, arrow.vel.y) * dt;
-    if (
-      arrow.life <= 0 ||
-      isWall(world, arrow.pos.x, arrow.pos.y) ||
-      // mobilia segura a flecha como parede, sem quebrar
-      isFurniture(
-        tileAt(world, Math.floor(arrow.pos.x), Math.floor(arrow.pos.y)),
-      )
-    ) {
+    if (arrow.life <= 0 || isWall(world, arrow.pos.x, arrow.pos.y)) {
       // flecha que acabou sem acertar ninguem. A do inimigo avisa sobre quem
       // atirou
       if (arrow.owner === 'player') addFloater(world, arrow.pos, 0);
       else addFloater(world, shooterPos(world, arrow), 0, true);
       return false;
     }
-    // caixa segura a flecha e quebra
+    // caixa ou mobilia segura a flecha e quebra
     if (breakPropAt(world, arrow.pos.x, arrow.pos.y)) return false;
     if (arrow.owner === 'enemy') {
       const struck = world.players.find(

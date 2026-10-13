@@ -13,9 +13,10 @@ export default function App() {
   // ja no menu os modelos comecam a baixar: ao apertar Play, quase sempre
   // nao ha espera
   const outfit = useGameStore((state) => state.look.outfit);
+  const blade = useGameStore((state) => state.look.blade);
   useEffect(() => {
-    void preloadGameAssets(outfit);
-  }, [outfit]);
+    void preloadGameAssets({ outfit, blade });
+  }, [outfit, blade]);
   if (screen === 'menu') return <HomePage />;
   if (screen === 'character') return <CharacterPage />;
   if (screen === 'lobby') return <LobbyPage />;

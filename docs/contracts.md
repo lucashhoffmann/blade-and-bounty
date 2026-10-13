@@ -151,9 +151,10 @@ type RoomTemplate = {
 
 - linha `0` de `tiles` e o fundo da sala (saida); a ultima e a entrada
 - `#` parede, `.` chao, `$` dinheiro, `C` bau da loja, `o` caixa destrutivel
-- mobilia fixa: `T` mesa, `S` estante, `B` barris de enfeite
-  (`isFurniture`). Bloqueia passagem, caminho (`findPath`) e flecha; nao
-  bloqueia visao; nao quebra nem solta item. A flecha some nela como em parede
+- mobilia: `T` mesa, `S` estante, `B` barris de enfeite (`isFurniture`). E um
+  `Prop` como a caixa, com a letra em `Prop.furniture`: bloqueia passagem,
+  caminho (`findPath`) e flecha, nao visao, e quebra do mesmo jeito (flecha,
+  golpe, morte por perto). Nao solta item nem vira bau dourado
 - `P` pilar: na simulacao e igual a parede (`isSolidTile` e `isWall`), segura
   tambem a visao. So o desenho muda
 - nenhum waypoint de patrulha cai em mobilia ou pilar
@@ -347,6 +348,88 @@ type Projectile = {
 
 Velocidade por passo fica abaixo do diametro de colisao, entao nao atravessa
 personagem.
+
+## Moeda vermelha e loja de skins
+
+Moeda que vale **fora da partida**: compra skin na loja da tela inicial.
+
+### Na partida
+
+- `Pickup` de `kind` `'ruby'`: a moeda dourada, maior, vermelha, de pe
+- de onde sai, so no solo: tabela das caixas (`RUBY_LOOT_CHANCE`, a ultima
+  faixa; vale para caixa quebrada e inimigo morto), bau dourado
+  (`RUBY_GOLDEN_CHANCE`, junto do premio) e chefe (`RUBY_BOSS`, sempre)
+- `run.rubies` e `Hud.rubies`: quantas ele ganhou nesta partida. **So para
+  mostrar**
+
+### Cofre (`modules/vault/systems/vault.system.ts`)
+
+O que entra no saldo nao depende de nada editavel pelo inspetor:
+
+- o livro de cada partida fica numa variavel do modulo, fora do `World`
+- `claimRuby(world, roomIndex)`: paga a moeda pega, se a sala existe em
+  `world.rooms`, a partida e solo e a sala ainda nao bateu o teto
+  (`RUBY_ROOM_CAP`; `RUBY_BOSS_CAP` na arena). Moeda a mais some sem valer
+- `takeRubies(world)`: o que foi pago desde a ultima chamada. O store chama a
+  cada passo e manda para a carteira. O `value` da moeda e `run.rubies` nao
+  entram na conta
+
+### Carteira (`store/game-store/wallet.ts`)
+
+Fonte da verdade do saldo e das skins compradas. O store guarda so uma copia
+(`rubies`, `owned`) para a tela.
+
+- o saldo so cresce por `credit`, com o que o cofre pagou
+- `buyOutfit(id)`: confere o saldo da carteira, desconta o preco fixo, guarda
+  a skin. A acao do store de mesmo nome ja veste
+- `mergeLook` so aceita `outfit` que a carteira tem
+- copia do store alterada por fora (`setState`) e desfeita por um
+  `subscribe`, que tambem tira skin vestida sem ter sido comprada
+- armazenamento local: vai `wallet: { rubies, owned, seal }`. O `seal` e um
+  resumo do conteudo; valor editado a mao nao bate, e a carteira volta ao
+  zero (`restoreWallet`)
+
+**Limite**: o jogo roda inteiro no navegador e o segredo do selo esta no
+codigo. Isso segura edicao de valor pelo inspetor e pelo armazenamento
+local; nao segura quem reescrever o codigo carregado. Trava de verdade so
+com servidor guardando o saldo.
+
+### Preco (`modules/skins/constants/skins.constants.ts`)
+
+- `OUTFIT_IDS`: as dez skins, da mais barata a mais cara. Sao todos os
+  personagens do kit, do ladino ao esqueleto guerreiro
+- `OUTFIT_HOURS`: quantas horas de jogo cada uma deve custar. Duas saem
+  rapido (15 minutos cada); as mais vistosas ficam em 10 e 16 horas
+- `outfitPrice(id)`: `horas * RUBIES_PER_HOUR`, arredondado. **Fixo**: nao
+  muda com o tempo, o saldo nem o que ja foi comprado
+- `RUBIES_PER_HOUR` e uma estimativa do que uma hora rende; a conta esta no
+  comentario do arquivo. Mudou uma chance de moeda vermelha: refazer
+
+### Skins de arma
+
+O que o player leva na mao no lugar da espada: adaga, machado, varinha,
+cajado, montante, as armas de osso. **So muda o desenho**: alcance
+(`SWORD_RANGE`), dano, tempo de golpe, critico e tudo mais sao os da espada,
+com qualquer uma.
+
+- `BLADE_IDS`, `BLADE_HOURS`, `bladePrice` (`skins.constants.ts`): mesmo
+  calculo de preco das skins de corpo; a espada e de graca
+- `look.blade`: a que ele usa. `mergeLook` so aceita a que a carteira tem
+- carteira: `blades` (as compradas) entra no selo junto do resto. Carteira
+  salva antes de existirem skins de arma continua valendo (selo antigo)
+- `playerModel(look)` (`character-models.config.ts`): o corpo da skin com o
+  arquivo de `BLADE_URLS[look.blade]` na mao direita. E o que a partida, a
+  tela de carregamento e o preview da loja usam
+- na partida, com arco ou besta na mao a skin de arma some, como a espada
+  sumia; o cartao da arma no HUD continua mostrando a espada
+
+### Telas
+
+- tela inicial: botao "Loja de skins" logo abaixo do Play, com o saldo
+- loja (a tela de personagem): preview do modelo a esquerda; duas
+  prateleiras, skins e armas, cada linha com nome, preco e "Em uso",
+  "Usar", "Comprar" ou "Faltam N". Tocar na linha mostra o item no preview
+  sem comprar
 
 ## Perseguicao e efeitos de camera
 

@@ -54,6 +54,7 @@ import {
   ROOM_ENEMY_MAX,
   ROOM_H,
   ROOM_W,
+  RUBY_LOOT_CHANCE,
   SHIELD_MAX,
   SHIELD_MIN,
   SHOP_EVERY,
@@ -169,7 +170,7 @@ describe('geracao de salas', () => {
     const world = createEmptyWorld(1);
     spawnRoom(world, 1, open);
     const crates = open.tiles.join('').split('o').length - 1;
-    expect(world.props).toHaveLength(crates);
+    expect(world.props.filter((p) => !p.furniture)).toHaveLength(crates);
     expect(world.props.every((p) => !p.broken)).toBe(true);
     expect(world.rooms[0].tiles).not.toBe(open.tiles);
   });
@@ -285,12 +286,19 @@ describe('grid e caminho', () => {
     expect(findPath(world, from, to)).toHaveLength(8);
   });
 
-  it('mobilia bloqueia caminho mas nao visao, e nao quebra; pilar bloqueia os dois', () => {
+  it('mobilia e como a caixa, mas quebra sem soltar item; pilar e parede', () => {
     const world = createArenaWorld({ 6: '#TSBTSBTSB#' });
+    expect(world.props.map((prop) => prop.furniture).join('')).toBe(
+      'TSBTSBTSB',
+    );
     expect(hasLineOfSight(world, from, to)).toBe(true);
     expect(findPath(world, from, to)).toEqual([]);
+    for (let x = 1.5; x < 10; x++) {
+      expect(breakPropAt(world, x, 6.5)).toBe(true);
+    }
     expect(breakPropAt(world, 2.5, 6.5)).toBe(false);
-    expect(findPath(world, from, to)).toEqual([]);
+    expect(findPath(world, from, to)).toHaveLength(8);
+    expect(world.pickups).toHaveLength(0);
 
     const pillars = createArenaWorld({ 6: '#PPPPPPPPP#' });
     expect(hasLineOfSight(pillars, from, to)).toBe(false);
@@ -562,7 +570,9 @@ describe('bau dourado', () => {
         broken: false,
         golden: true,
       });
-      for (const pickup of world.pickups) {
+      // a moeda vermelha que as vezes vem junto tem teste proprio
+      const prizes = world.pickups.filter((pickup) => pickup.kind !== 'ruby');
+      for (const pickup of prizes) {
         if (pickup.kind === 'invisibility') {
           expect(pickup.value).toBeGreaterThanOrEqual(INVISIBILITY_MIN);
           expect(pickup.value).toBeLessThanOrEqual(INVISIBILITY_MAX);
@@ -574,7 +584,7 @@ describe('bau dourado', () => {
         }
       }
       seen.add(
-        world.pickups
+        prizes
           .map((pickup) => pickup.kind)
           .sort()
           .join('+'),
@@ -749,5 +759,27 @@ describe('chefe', () => {
     updateRooms(world);
     expect(bossOf(world, arena)!.detection).toBe(1);
     expect(world.run.events.at(-1)?.text).toContain('chefe');
+  });
+});
+
+describe('moeda vermelha', () => {
+  it('sai pouco das caixas, e so no solo', () => {
+    const rubies = (mode: 'solo' | 'multi') => {
+      const world = createArenaWorld();
+      world.mode = mode;
+      for (let i = 0; i < 4000; i++) {
+        breakProp(world, {
+          id: i,
+          roomIndex: 0,
+          pos: { x: 5.5, y: 5.5 },
+          broken: false,
+        });
+      }
+      return world.pickups.filter((pickup) => pickup.kind === 'ruby').length;
+    };
+    const share = rubies('solo') / 4000;
+    expect(share).toBeGreaterThan(RUBY_LOOT_CHANCE / 3);
+    expect(share).toBeLessThan(RUBY_LOOT_CHANCE * 2.5);
+    expect(rubies('multi')).toBe(0);
   });
 });

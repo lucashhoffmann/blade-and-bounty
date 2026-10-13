@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
 import {
   ENEMY_MODELS,
-  PLAYER_OUTFITS,
+  playerModel,
 } from '@/app/engine/characters/character-models.config';
 import type { CharacterView } from '@/app/engine/characters/character-view.types';
 import { loadModelKit, type ModelKit } from '@/app/engine/scenery/model-kit';
@@ -25,7 +25,6 @@ import {
   castRay,
   doorOpen,
   hasExitDoor,
-  isFurniture,
   isSolidTile,
   nearbyProp,
   tileAt,
@@ -1496,34 +1495,26 @@ export function createWorldRenderer(
       group.add(chest.group);
     }
 
-    // mobilia fixa e pilar: um por tile do template. Do kit, centrado no
-    // tile e com o pe no chao; sem kit, uma caixa
+    // pilar: um por tile 'P' do template. Do kit, esticado ate a altura da
+    // parede; sem kit, um bloco dela. (Mesa, estante e barris sao `Prop`:
+    // ver buildProp)
     room.tiles.forEach((line, row) => {
       for (let col = 0; col < line.length; col++) {
-        const pillar = line[col] === 'P';
-        if (!pillar && !isFurniture(line[col])) continue;
+        if (line[col] !== 'P') continue;
         const center = tileCenter(room.index, col, row);
         const item = new THREE.Group();
-        item.name = 'furniture';
+        item.name = 'pillar';
         item.position.set(center.x, 0, -center.y);
-        const placed = SCENERY.furniture?.[line[col]];
+        const placed = SCENERY.furniture?.P;
         const piece = placed && scenery?.clone(placed.piece);
         if (piece && placed) {
           piece.scale.setScalar(placed.scale);
           if (placed.height) piece.scale.y = WALL_HEIGHT / placed.height;
-          const box = new THREE.Box3().setFromObject(piece);
-          piece.position.x -= (box.min.x + box.max.x) / 2;
-          piece.position.y -= box.min.y;
-          piece.position.z -= (box.min.z + box.max.z) / 2;
           item.add(piece);
         } else {
-          const block = new THREE.Mesh(
-            geo.wall,
-            pillar ? papers.wall.material : mat.wood,
-          );
-          const tall = pillar ? 1 : 0.5;
-          block.scale.set(0.8, tall, 0.8);
-          block.position.y = (WALL_HEIGHT * tall) / 2;
+          const block = new THREE.Mesh(geo.wall, papers.wall.material);
+          block.scale.set(0.8, 1, 0.8);
+          block.position.y = WALL_HEIGHT / 2;
           item.add(block);
         }
         group.add(item);
@@ -1790,14 +1781,25 @@ export function createWorldRenderer(
           plant: [mat.pot, mat.leaf],
         }[variant];
     // inteiro, do kit: bau dourado, ou uma das pecas quebraveis pelo id
+    // mobilia: a peca da letra do tile (sem ela no kit, cai no de caixas)
     const placed = prop.golden
       ? SCENERY.goldenChest
-      : SCENERY.props[Math.floor(pick * SCENERY.props.length)];
-    const piece = prop.broken ? null : scenery?.clone(placed.piece);
-    if (piece) {
+      : prop.furniture
+        ? SCENERY.furniture?.[prop.furniture]
+        : SCENERY.props[Math.floor(pick * SCENERY.props.length)];
+    const piece = prop.broken || !placed ? null : scenery?.clone(placed.piece);
+    if (piece && placed) {
       piece.scale.setScalar(placed.scale);
-      // viradas cada uma para um lado; o bau dourado, de frente
-      if (!prop.golden) piece.rotation.y = (prop.id % 4) * (Math.PI / 2);
+      if (prop.furniture) {
+        // de frente, no meio do tile e com o pe no chao, onde quer que a
+        // origem da peca esteja (a estante do kit e de pendurar)
+        const box = new THREE.Box3().setFromObject(piece);
+        piece.position.x -= (box.min.x + box.max.x) / 2;
+        piece.position.y -= box.min.y;
+        piece.position.z -= (box.min.z + box.max.z) / 2;
+      }
+      // viradas cada uma para um lado; bau dourado e mobilia, de frente
+      else if (!prop.golden) piece.rotation.y = (prop.id % 4) * (Math.PI / 2);
       group.add(piece);
       if (prop.golden) {
         group.name = 'goldenChest';
@@ -2464,7 +2466,7 @@ export function createWorldRenderer(
       lastSlash: 0,
     };
     // Mesmo esquema do inimigo: o de pecas so aparece se o modelo falhar.
-    const outfit = PLAYER_OUTFITS[look.outfit] ?? PLAYER_OUTFITS.rogueHooded;
+    const outfit = playerModel(look);
     {
       const { rig } = outfit;
       loadCharacterView(outfit).then(

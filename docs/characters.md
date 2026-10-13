@@ -434,13 +434,13 @@ preparo e volta longos, e o golpe do jogo dura `SLASH_TIME` (0.36 s). O
 
 `character-models.config.ts`:
 
-| Quem     | Modelo (KayKit Adventurers)                                                                       | Na mao                                    |
-| -------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| player   | o escolhido na tela de personagem (`look.outfit`): Rogue Hooded, Rogue ou Mage (`PLAYER_OUTFITS`) | espada; com arco ou besta, a arma do jogo |
-| `knight` | Knight, Skeleton Minion ou Skeleton Rogue                                                         | espada, ou a lamina de esqueleto          |
-| `archer` | Ranger ou Skeleton Mage                                                                           | arco do jogo                              |
-| `brute`  | Barbarian, 25% maior                                                                              | besta do jogo, clipe de tiro a 2 maos     |
-| `boss`   | Skeleton Warrior, 1.9 vez maior                                                                   | machado                                   |
+| Quem     | Modelo (KayKit Adventurers)                                                                                          | Na mao                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| player   | a skin vestida (`look.outfit`): qualquer personagem do kit, comprado na loja (`PLAYER_OUTFITS`, `docs/contracts.md`) | espada, lamina ou machado; com arco ou besta, a arma do jogo |
+| `knight` | Knight, Skeleton Minion ou Skeleton Rogue                                                                            | espada, ou a lamina de esqueleto                             |
+| `archer` | Ranger ou Skeleton Mage                                                                                              | arco do jogo                                                 |
+| `brute`  | Barbarian, 25% maior                                                                                                 | besta do jogo, clipe de tiro a 2 maos                        |
+| `boss`   | Skeleton Warrior, 1.9 vez maior                                                                                      | machado                                                      |
 
 Cada tipo de inimigo tem uma lista de caras (`ENEMY_MODELS[kind]` e um
 array). A de cada inimigo sai do `id` dele: e sempre a mesma, e e so visual,

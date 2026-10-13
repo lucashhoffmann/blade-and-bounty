@@ -1,6 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { outfitPrice } from '@/app/modules/skins/constants/skins.constants';
+import {
+  credit,
+  readWallet,
+  restoreWallet,
+} from '@/app/store/game-store/wallet';
 import { DEFAULT_LOOK, useGameStore } from '@/app/store/game-store/game.store';
 import { CharacterPage } from '@/resources/pages/character/character.page';
 
@@ -28,7 +34,9 @@ beforeEach(() => {
   dispose.mockClear();
   useGameStore.getState().backToMenu();
   useGameStore.getState().openCharacter();
-  useGameStore.setState({ look: DEFAULT_LOOK });
+  // carteira vazia: so a skin padrao
+  restoreWallet(null);
+  useGameStore.setState({ ...readWallet(), look: DEFAULT_LOOK });
 });
 
 describe('CharacterPage', () => {
@@ -37,20 +45,52 @@ describe('CharacterPage', () => {
     expect(setLook).toHaveBeenLastCalledWith(DEFAULT_LOOK);
   });
 
-  it('escolher quem voce e grava no store e troca o modelo do preview', async () => {
+  it('tocar numa skin mostra ela no preview, mesmo sem ter comprado', async () => {
     render(<CharacterPage />);
-    expect(
-      screen.getByRole('button', { name: 'Ladino encapuzado' }),
-    ).toHaveAttribute('aria-pressed', 'true');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Maga' }));
-    const look = { ...DEFAULT_LOOK, outfit: 'mage' as const };
-    expect(useGameStore.getState().look).toEqual(look);
-    expect(setLook).toHaveBeenLastCalledWith(look);
-    expect(screen.getByRole('button', { name: 'Maga' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    // a skin e a arma que ele veste
+    expect(screen.getAllByText('Em uso')).toHaveLength(2);
+    await userEvent.click(
+      screen.getByRole('button', { name: /Esqueleto guerreiro/ }),
     );
+    expect(setLook).toHaveBeenLastCalledWith({
+      ...DEFAULT_LOOK,
+      outfit: 'skeletonWarrior',
+    });
+    // so olhou: continua vestindo a de antes
+    expect(useGameStore.getState().look.outfit).toBe(DEFAULT_LOOK.outfit);
+  });
+
+  it('sem saldo mostra quanto falta; com saldo, compra, desconta e veste', async () => {
+    render(<CharacterPage />);
+    const price = outfitPrice('rogue');
+    expect(screen.queryByRole('button', { name: 'Comprar Ladina' })).toBeNull();
+    expect(screen.getAllByText(`Faltam ${price}`).length).toBeGreaterThan(0);
+
+    act(() => useGameStore.setState(credit(price + 3)));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Comprar Ladina' }),
+    );
+    const state = useGameStore.getState();
+    expect(state.rubies).toBe(3);
+    expect(state.owned).toContain('rogue');
+    expect(state.look.outfit).toBe('rogue');
+    expect(screen.getByLabelText('Moedas vermelhas: 3')).toBeInTheDocument();
+    // o preview acompanha a skin vestida
+    expect(setLook).toHaveBeenLastCalledWith({
+      ...DEFAULT_LOOK,
+      outfit: 'rogue',
+    });
+  });
+
+  it('skin ja comprada troca com Usar, sem cobrar', async () => {
+    act(() => useGameStore.setState(credit(outfitPrice('rogue'))));
+    act(() => void useGameStore.getState().buyOutfit('rogue'));
+    render(<CharacterPage />);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Usar Ladino encapuzado' }),
+    );
+    expect(useGameStore.getState().look.outfit).toBe('rogueHooded');
+    expect(useGameStore.getState().rubies).toBe(0);
   });
 
   it('tamanho da arma grava no store e mostra a porcentagem', () => {
@@ -80,15 +120,6 @@ describe('CharacterPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Espada' }));
     expect(setWeapon).toHaveBeenLastCalledWith(null);
-  });
-
-  it('Restaurar padrao desfaz a customizacao', async () => {
-    useGameStore.setState({ look: { ...DEFAULT_LOOK, outfit: 'rogue' } });
-    render(<CharacterPage />);
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Restaurar padrao' }),
-    );
-    expect(useGameStore.getState().look).toEqual(DEFAULT_LOOK);
   });
 
   it('Voltar retorna ao menu e libera o preview', async () => {

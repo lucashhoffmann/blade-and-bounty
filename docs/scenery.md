@@ -15,6 +15,7 @@ Ha dois cenarios, e o jogo troca sozinho entre eles:
 A simulacao nao muda: parede continua sendo o tile `#`, caixa o tile `o`, com
 as mesmas colisoes. O kit so troca o desenho. Mobilia e pilar tambem sao
 tile do template (`T`, `S`, `B`, `P`): obstaculo de verdade, com ou sem kit.
+Mobilia quebra como a caixa; pilar e parede.
 
 ## As pecas e quem conhece o que
 
@@ -54,16 +55,16 @@ type ModelKit = {
 | porta de correr             | a folha de madeira de `wall_doorway`                      | duas folhas no vao, sem moldura; correm para os lados                                 |
 | mesa (tile `T`)             | `table_medium_decorated_A`                                | um por tile, centrada, com o pe no chao                                               |
 | estante (tile `S`)          | `shelves`                                                 | a de pendurar do kit, posta de pe no chao, de frente para a camera                    |
-| barris (tile `B`)           | `barrel_small_stack`                                      | pilha de barris; nao quebra (o barril que quebra e o `barrel_large` do tile `o`)      |
+| barris (tile `B`)           | `barrel_small_stack`                                      | pilha de barris; quebra como a caixa, sem soltar item                                 |
 | pilar (tile `P`)            | `pillar`                                                  | esticado ate a altura da parede (`height`)                                            |
 | chao variado                | `floor_tile_small_broken_A/B`, `floor_tile_small_weeds_A` | cerca de 12% dos ladrilhos de chao, sempre nos mesmos lugares                         |
 | tochas                      | `torch_mounted`                                           | nas faces de parede viradas para a camera, uma a cada 3 (na arena do chefe, a cada 2) |
 | estandartes                 | `banner_red`, `banner_blue`, `banner_green`               | na parede do fundo; vermelho na arena do chefe, as outras cores revezam por nivel     |
 
-Mobilia e pilar (`SCENERY.furniture`, pela letra do tile): colisao em
-`isFurniture` / `isWall` (`level/utils/grid.util.ts`). Sem kit, ou sem a peca,
-sai uma caixa de madeira (pilar: bloco da parede). Regras em
-`docs/contracts.md`.
+Mobilia e pilar (`SCENERY.furniture`, pela letra do tile). Mesa, estante e
+barris sao `Prop` com `furniture` e saem de `buildProp`: inteiros, a peca do
+kit; quebrados, os destrocos de sempre; sem kit, o objeto de caixas. O pilar
+sai de `buildRoom` (sem kit: bloco da parede). Regras em `docs/contracts.md`.
 
 Continua de antes, sem peca do kit: destrocos da caixa quebrada, coracao,
 escudo e os outros itens.

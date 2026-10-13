@@ -3,7 +3,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
-import { PLAYER_OUTFITS } from '@/app/engine/characters/character-models.config';
+import {
+  PLAYER_OUTFITS,
+  playerModel,
+} from '@/app/engine/characters/character-models.config';
 import type {
   CharacterPose,
   CharacterView,
@@ -118,14 +121,18 @@ export function createCharacterPreview(
 
   return {
     setLook(next) {
-      const changed = next.outfit !== look?.outfit;
+      // corpo ou arma na mao mudou: monta o modelo de novo
+      const changed =
+        next.outfit !== look?.outfit || next.blade !== look?.blade;
       look = next;
       if (!changed) return hold();
-      const outfit = next.outfit;
-      void loadCharacterView(PLAYER_OUTFITS[outfit]).then(
+      const { outfit, blade: held } = next;
+      void loadCharacterView(playerModel(next)).then(
         (view) => {
           // trocou de novo, ou saiu da tela, antes deste chegar
-          if (disposed || look?.outfit !== outfit) return view.dispose();
+          if (disposed || look?.outfit !== outfit || look?.blade !== held) {
+            return view.dispose();
+          }
           gun?.dispose();
           gun = null;
           body?.dispose();

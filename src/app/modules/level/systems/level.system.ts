@@ -19,6 +19,7 @@ import {
   bossOf,
   circleHitsWall,
   isBossRoom,
+  isFurniture,
   roomIndexAt,
   tileCenter,
 } from '@/app/modules/level/utils/grid.util';
@@ -246,12 +247,13 @@ export function spawnRoom(
 
   template.tiles.forEach((line, row) => {
     for (let col = 0; col < line.length; col++) {
-      if (line[col] === 'o') {
+      if (line[col] === 'o' || isFurniture(line[col])) {
         world.props.push({
           id: world.nextId++,
           roomIndex: index,
           pos: tileCenter(index, col, row),
           broken: false,
+          ...(line[col] === 'o' ? {} : { furniture: line[col] }),
         });
       }
       if (line[col] !== '$') continue;
@@ -272,7 +274,9 @@ export function spawnRoom(
   // bau dourado: uma das caixas da sala de combate, as vezes; com guarda
   if (template.kind !== 'combat') return;
   if (nextRandom(world) >= goldenChestChance(index)) return;
-  const crates = world.props.filter((prop) => prop.roomIndex === index);
+  const crates = world.props.filter(
+    (prop) => prop.roomIndex === index && !prop.furniture,
+  );
   const crate = crates[Math.floor(nextRandom(world) * crates.length)];
   if (!crate) return;
   crate.golden = true;

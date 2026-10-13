@@ -40,10 +40,10 @@ describe('HomePage', () => {
     expect(useGameStore.getState().screen).toBe('intro');
   });
 
-  it('Configurar personagem abre a tela de personagem', async () => {
+  it('Loja de skins fica logo abaixo do Play, mostra o saldo e abre a loja', async () => {
     render(<HomePage />);
     await userEvent.click(
-      screen.getByRole('button', { name: 'Configurar personagem' }),
+      screen.getByRole('button', { name: /Loja de skins/ }),
     );
     expect(useGameStore.getState().screen).toBe('character');
   });
@@ -65,7 +65,7 @@ describe('HomePage', () => {
     expect(toggle).toHaveTextContent('🇧🇷 Idioma: Português');
     await userEvent.click(toggle);
     expect(
-      screen.getByRole('button', { name: 'Customize character' }),
+      screen.getByRole('button', { name: /Skin shop/ }),
     ).toBeInTheDocument();
     expect(screen.getByText('Best: room 0')).toBeInTheDocument();
     expect(useLanguage.getState().language).toBe('en');

@@ -1,4 +1,4 @@
-import { Play, Settings, Trophy, UserRound, Users } from 'lucide-react';
+import { Play, Settings, Store, Trophy, Users } from 'lucide-react';
 
 import { useGameStore } from '@/app/store/game-store/game.store';
 import { useHomePage } from '@/resources/pages/home/use-home.page';
@@ -25,6 +25,7 @@ export function HomePage() {
   const best = useGameStore((state) => state.best);
   const startRun = useGameStore((state) => state.startRun);
   const openCharacter = useGameStore((state) => state.openCharacter);
+  const rubies = useGameStore((state) => state.rubies);
   const openLobby = useGameStore((state) => state.openLobby);
   const { online } = useHomePage();
   const bloodColor = useGameStore((state) => state.bloodColor);
@@ -98,12 +99,23 @@ export function HomePage() {
           className={SECONDARY}
           onClick={openCharacter}
         >
-          <UserRound
+          <Store
             aria-hidden
             className='size-5'
             strokeWidth={3}
           />
           {t.home.character}
+          {/* saldo de moedas vermelhas */}
+          <span
+            aria-label={t.home.rubies(rubies)}
+            className='ml-1 flex items-center gap-1 rounded-full bg-black/35 px-2 py-0.5 text-sm tabular-nums'
+          >
+            <span
+              aria-hidden
+              className='inline-block size-3.5 rounded-full border-2 border-[var(--game-ink)] bg-red-600'
+            />
+            {rubies}
+          </span>
         </button>
         {/* so com o servidor de salas no ar (use-home.page) */}
         {online && (

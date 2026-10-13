@@ -43,14 +43,17 @@ export function useGamePage() {
   // Modelos e cenario chegam pela rede: ate la a tela fica coberta, para
   // ninguem ver a sala se montar aos pedacos. Nunca trava: a espera tem teto.
   const outfit = useGameStore((state) => state.look.outfit);
+  const blade = useGameStore((state) => state.look.blade);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    void preloadGameAssets(outfit).then(() => alive && setLoading(false));
+    void preloadGameAssets({ outfit, blade }).then(
+      () => alive && setLoading(false),
+    );
     return () => {
       alive = false;
     };
-  }, [outfit]);
+  }, [outfit, blade]);
 
   // a mesma legenda serve de abertura da run e de tela de pausa
   // fotos das armas para o HUD, tiradas uma vez por montagem

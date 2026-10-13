@@ -19,6 +19,10 @@ import {
 const CAMERA_HEIGHT = 13;
 const CAMERA_BACK = 7;
 const MAX_FRAME_TIME = 0.1;
+// teto de pixels por ponto no celular; no computador e 2
+const MOBILE_PIXEL_RATIO = 1.5;
+// quadro a menos disto de um numero inteiro de passos conta como inteiro
+const FRAME_SNAP = 0.15;
 const CAMERA_FOV = 45;
 // soco de camera ao matar, ao levar dano e ao acertar: zoom curto com blur
 // que se desfaz
@@ -60,8 +64,18 @@ function axis(keys: Set<string>, positive: string[], negative: string[]) {
 }
 
 export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Celular: tela densa e GPU fraca. Menos pixels (o que mais pesa) e sem o
+  // desfoque de CSS no canvas, que la refaz a tela inteira a cada quadro
+  const touch =
+    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    powerPreference: 'high-performance',
+  });
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, touch ? MOBILE_PIXEL_RATIO : 2),
+  );
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.ui.background);
@@ -188,7 +202,14 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
 
   const frame = (now: number) => {
     frameId = requestAnimationFrame(frame);
-    const frameTime = Math.min(MAX_FRAME_TIME, (now - last) / 1000);
+    let frameTime = Math.min(MAX_FRAME_TIME, (now - last) / 1000);
+    // Tela a 60 Hz entrega quadros de quase um passo, nunca exato: a sobra
+    // acumulava ate um quadro rodar dois passos e outro nenhum, e a imagem
+    // dava um tranco. Quadro que e quase N passos vale N passos
+    const steps = Math.round(frameTime / FIXED_DT);
+    if (steps >= 1 && Math.abs(frameTime / FIXED_DT - steps) < FRAME_SNAP) {
+      frameTime = steps * FIXED_DT;
+    }
     accumulator += frameTime;
     last = now;
 
@@ -271,7 +292,9 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
       clash * CLASH_BLUR,
       beat * CHASE_BEAT_BLUR,
     );
-    canvas.style.filter = blur > 0.05 ? `blur(${blur.toFixed(1)}px)` : '';
+    if (!touch) {
+      canvas.style.filter = blur > 0.05 ? `blur(${blur.toFixed(1)}px)` : '';
+    }
 
     // camera segue suavizada, como o personagem (ver world.renderer animate)
     // morto no multiplayer assiste: a camera passa a seguir um colega vivo

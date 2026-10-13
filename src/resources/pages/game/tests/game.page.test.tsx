@@ -48,6 +48,7 @@ const HUD: HudData = {
   invincible: 0,
   boss: 0,
   chased: false,
+  rubies: 0,
   dashes: 4,
   revives: 0,
   money: 250,
@@ -80,7 +81,7 @@ describe('Hud', () => {
     expect(screen.getByText('250')).toBeInTheDocument();
     expect(screen.getByText('Arco')).toBeInTheDocument();
     expect(screen.getByLabelText('Flechas: 4 de 30')).toBeInTheDocument();
-    expect(screen.getByText('NA MOSCA 15%')).toBeInTheDocument();
+    expect(screen.getByLabelText('NA MOSCA 15%')).toBeInTheDocument();
   });
 
   it.each(['bow', 'metalBow', 'crossbow'] as const)(
@@ -115,7 +116,7 @@ describe('Hud', () => {
     expect(screen.queryByText('Espada')).toBeNull();
     expect(container.querySelector('img')).toHaveAttribute('src', 'data:sword');
     expect(screen.queryByLabelText(/Flechas/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Headshot/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/NA MOSCA/)).not.toBeInTheDocument();
   });
 
   it('mostra os saltos guardados em tracos, de 6', () => {

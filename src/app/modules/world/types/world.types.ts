@@ -147,6 +147,9 @@ export type Prop = {
   roomIndex: number;
   pos: Vec2;
   broken: boolean;
+  // mobilia (letra do tile: 'T', 'S' ou 'B'): quebra como a caixa, mas nao
+  // solta item nem vira bau dourado
+  furniture?: string;
   // bau dourado: raro, solta premio proprio em vez da tabela das caixas
   golden?: boolean;
 };

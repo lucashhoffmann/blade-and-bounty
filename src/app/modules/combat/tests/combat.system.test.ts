@@ -365,17 +365,20 @@ describe('updateProjectiles', () => {
     expect(enemy.hp).toBe(30);
   });
 
-  it('mobilia segura toda flecha, sem quebrar', () => {
+  it('mobilia segura a flecha e quebra, sem soltar item; a seguinte passa', () => {
     const world = createArenaWorld({ 8: '#....T....#' });
     const enemy = addEnemy(world, 5.5, 6.5, UP);
 
     shootUp(world);
     fly(world, 1);
+    expect(world.props[0].broken).toBe(true);
+    expect(world.rooms[0].tiles[8]).toBe('#.........#');
+    expect(world.pickups).toHaveLength(0);
+    expect(enemy.hp).toBe(60);
+
     shootUp(world);
     fly(world, 1);
-    expect(enemy.hp).toBe(60);
-    expect(world.projectiles).toHaveLength(0);
-    expect(world.rooms[0].tiles[8]).toBe('#....T....#');
+    expect(enemy.hp).toBe(30);
   });
 
   it('flecha para na parede e nao acerta quem esta atras', () => {
@@ -1244,9 +1247,13 @@ describe('chefe em combate', () => {
     const prize = world.pickups.slice(1).map((pickup) => pickup.kind);
     expect(prize.length).toBeGreaterThan(0);
     for (const kind of prize) {
-      expect(['heart', 'shield', 'invisibility', 'invincibility']).toContain(
-        kind,
-      );
+      expect([
+        'heart',
+        'shield',
+        'invisibility',
+        'invincibility',
+        'ruby',
+      ]).toContain(kind);
     }
   });
 });

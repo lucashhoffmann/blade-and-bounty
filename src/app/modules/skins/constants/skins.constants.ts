@@ -51,3 +51,39 @@ export const OUTFIT_HOURS: Record<OutfitId, number> = {
 export function outfitPrice(id: OutfitId): number {
   return Math.round(OUTFIT_HOURS[id] * RUBIES_PER_HOUR);
 }
+
+// Skins de arma: o que o player leva na mao no lugar da espada. **So muda o
+// desenho**: alcance, dano, tempo de golpe e tudo mais continuam os da
+// espada, seja adaga ou cajado. Preco pelo mesmo calculo das skins de corpo.
+export const BLADE_IDS = [
+  'sword',
+  'dagger',
+  'axe',
+  'wand',
+  'skeletonBlade',
+  'staff',
+  'skeletonAxe',
+  'greatsword',
+  'greataxe',
+  'skeletonStaff',
+] as const;
+export type BladeId = (typeof BLADE_IDS)[number];
+
+export const DEFAULT_BLADE: BladeId = 'sword';
+
+export const BLADE_HOURS: Record<BladeId, number> = {
+  sword: 0,
+  dagger: 0.25,
+  axe: 0.5,
+  wand: 1,
+  skeletonBlade: 1.5,
+  staff: 2.5,
+  skeletonAxe: 3.5,
+  greatsword: 5,
+  greataxe: 7,
+  skeletonStaff: 9,
+};
+
+export function bladePrice(id: BladeId): number {
+  return Math.round(BLADE_HOURS[id] * RUBIES_PER_HOUR);
+}

@@ -2,6 +2,7 @@ import {
   Coins,
   ChevronsRight,
   Cross,
+  Crosshair,
   Heart,
   ListOrdered,
   Pause,
@@ -172,7 +173,8 @@ function WeaponCard({ hud, previews }: Pick<HudProps, 'hud' | 'previews'>) {
         alt={weapon ? '' : t.common.sword}
         className='h-8 w-16 object-contain sm:h-12 sm:w-24'
       />
-      {/* no celular so as flechas: nome e headshot nao cabem na coluna */}
+      {/* no celular o nome nao cabe na coluna: flechas, e a taxa de headshot
+          com a mira no lugar do rotulo */}
       {weapon && (
         <div>
           <p className='text-outline hidden text-xs tracking-wide uppercase sm:block sm:text-sm'>
@@ -185,8 +187,16 @@ function WeaponCard({ hud, previews }: Pick<HudProps, 'hud' | 'previews'>) {
             {hud.ammo}
             <span className='text-xs opacity-60'>/{weapon.ammo}</span>
           </p>
-          <p className='text-outline hidden text-[10px] leading-tight text-orange-300 uppercase sm:block sm:text-xs'>
-            {t.game.headshot} {hud.headshot}%
+          <p
+            aria-label={`${t.game.headshot} ${hud.headshot}%`}
+            className='text-outline flex items-center gap-0.5 text-[10px] leading-tight text-orange-300 uppercase sm:text-xs'
+          >
+            <Crosshair
+              aria-hidden
+              className='size-3 sm:hidden'
+            />
+            <span className='hidden sm:inline'>{t.game.headshot}</span>
+            {hud.headshot}%
           </p>
         </div>
       )}
@@ -384,6 +394,19 @@ export function Hud({
             {hud.money}
           </p>
         </div>
+        {hud.rubies > 0 && (
+          <p
+            key={`rubies-${hud.rubies}`}
+            aria-label={t.home.rubies(hud.rubies)}
+            className='text-outline animate-hud-pop flex items-center gap-1 text-base leading-none sm:text-xl'
+          >
+            <span
+              aria-hidden
+              className='inline-block size-4 rounded-full border-2 border-[var(--game-ink)] bg-red-600'
+            />
+            {hud.rubies}
+          </p>
+        )}
         {onScoreboard && (
           <button
             type='button'

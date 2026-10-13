@@ -28,11 +28,7 @@ vi.mock('@/app/engine/characters/character-models.config', () => {
     rig: { scale: 0.5, turn: 0, slots: {}, clips: {} },
   });
   return {
-    PLAYER_OUTFITS: {
-      rogueHooded: model('hero'),
-      rogue: model('hero'),
-      mage: model('hero'),
-    },
+    playerModel: () => model('hero'),
     ENEMY_MODELS: {
       knight: [model('knight')],
       archer: [model('archer')],

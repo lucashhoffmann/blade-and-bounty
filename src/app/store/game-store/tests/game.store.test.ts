@@ -13,7 +13,19 @@ import {
   LOOK_SCALE,
   useGameStore,
   WEAPON_SCALE,
+  OUTFIT_IDS,
 } from '@/app/store/game-store/game.store';
+import {
+  BLADE_IDS,
+  bladePrice,
+  outfitPrice,
+} from '@/app/modules/skins/constants/skins.constants';
+import {
+  credit,
+  readWallet,
+  restoreWallet,
+  saveWallet,
+} from '@/app/store/game-store/wallet';
 
 const IDLE = { moveX: 0, moveY: 0, dash: false };
 const FORWARD = { moveX: 0, moveY: 1, dash: false };
@@ -285,13 +297,14 @@ it('setLook aceita tamanho da arma dentro da faixa propria', () => {
   setLook({ weapon: 1 });
 });
 
-it('personagem do player: so aceita os que existem, e save antigo ganha o padrao', () => {
+it('skin: so veste a que a carteira tem; save antigo ganha a padrao', () => {
   const store = () => useGameStore.getState();
+  // nao comprou: nao veste
   store().setLook({ outfit: 'mage' });
-  expect(store().look.outfit).toBe('mage');
+  expect(store().look.outfit).toBe(DEFAULT_LOOK.outfit);
   // valor que nao existe (save adulterado) nao entra
   store().setLook({ outfit: 'dragon' as never });
-  expect(store().look.outfit).toBe('mage');
+  expect(store().look.outfit).toBe(DEFAULT_LOOK.outfit);
 
   // look salvo antes de existir a escolha
   const old: Partial<typeof DEFAULT_LOOK> = { ...DEFAULT_LOOK };
@@ -318,4 +331,140 @@ it('hud avisa quando ha perseguicao: algum inimigo em alerta', () => {
   enemy.state = 'dead';
   step();
   expect(store().hud.chased).toBe(false);
+});
+
+// selo de antes das skins de arma: o mesmo calculo de wallet.ts, sem a
+// lista de armas
+const legacySeal = (rubies: number, owned: string[]) => {
+  const text = `b&b:wallet:7f3a91|${rubies}|${[...owned].sort().join(',')}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+};
+
+describe('loja de skins', () => {
+  const store = () => useGameStore.getState();
+  beforeEach(() => {
+    restoreWallet(null);
+    useGameStore.setState({ ...readWallet(), look: DEFAULT_LOOK });
+  });
+
+  it('compra com saldo: desconta o preco fixo, guarda a skin e ja veste', () => {
+    useGameStore.setState(credit(10));
+    expect(store().buyOutfit('rogue')).toBe(true);
+    expect(store().rubies).toBe(10 - outfitPrice('rogue'));
+    expect(store().owned).toContain('rogue');
+    expect(store().look.outfit).toBe('rogue');
+    // ja tem: nao cobra de novo
+    expect(store().buyOutfit('rogue')).toBe(false);
+    expect(store().rubies).toBe(10 - outfitPrice('rogue'));
+  });
+
+  it('sem saldo nao compra nem veste', () => {
+    useGameStore.setState(credit(1));
+    expect(store().buyOutfit('knight')).toBe(false);
+    expect(store().rubies).toBe(1);
+    expect(store().owned).not.toContain('knight');
+    expect(store().look.outfit).toBe(DEFAULT_LOOK.outfit);
+  });
+
+  it('trava: mudar o saldo ou a lista de skins pelo estado nao vale', () => {
+    useGameStore.setState({ rubies: 9999 });
+    expect(store().rubies).toBe(0);
+    expect(store().buyOutfit('skeletonWarrior')).toBe(false);
+
+    useGameStore.setState({ owned: [...OUTFIT_IDS] });
+    expect(store().owned).toEqual([DEFAULT_LOOK.outfit]);
+    // nem vestir direto o que nao comprou
+    useGameStore.setState({
+      look: { ...DEFAULT_LOOK, outfit: 'skeletonWarrior' },
+    });
+    expect(store().look.outfit).toBe(DEFAULT_LOOK.outfit);
+  });
+
+  it('trava: carteira salva com valor editado perde o selo e zera', () => {
+    credit(5);
+    const saved = saveWallet();
+    expect(restoreWallet(saved)).toEqual({
+      rubies: 5,
+      owned: ['rogueHooded'],
+      blades: ['sword'],
+    });
+    // saldo editado no armazenamento local
+    expect(restoreWallet({ ...saved, rubies: 500 }).rubies).toBe(0);
+    // skin acrescentada a mao
+    expect(
+      restoreWallet({ ...saved, owned: [...saved.owned, 'knight'] }).owned,
+    ).toEqual(['rogueHooded']);
+    // lixo
+    expect(restoreWallet('x').rubies).toBe(0);
+    expect(restoreWallet({ rubies: -3, owned: [], seal: '' }).rubies).toBe(0);
+  });
+
+  it('skin de arma: compra, veste, e as travas valem para ela tambem', () => {
+    useGameStore.setState(credit(bladePrice('staff')));
+    expect(store().buyBlade('staff')).toBe(true);
+    expect(store().rubies).toBe(0);
+    expect(store().blades).toEqual(['sword', 'staff']);
+    expect(store().look.blade).toBe('staff');
+    // nao comprou: nao leva na mao
+    store().setLook({ blade: 'greataxe' });
+    expect(store().look.blade).toBe('staff');
+    // mudar a lista ou a arma vestida pelo estado nao vale
+    useGameStore.setState({ blades: [...BLADE_IDS] });
+    expect(store().blades).toEqual(['sword', 'staff']);
+    useGameStore.setState({ look: { ...store().look, blade: 'greataxe' } });
+    expect(store().look.blade).toBe('sword');
+  });
+
+  it('carteira salva antes das skins de arma continua valendo', () => {
+    credit(4);
+    const saved: Partial<ReturnType<typeof saveWallet>> = saveWallet();
+    delete saved.blades;
+    // o selo antigo nao levava as armas: recalcula como era
+    saved.seal = legacySeal(saved.rubies!, saved.owned!);
+    expect(restoreWallet(saved)).toEqual({
+      rubies: 4,
+      owned: ['rogueHooded'],
+      blades: ['sword'],
+    });
+  });
+
+  it('moeda vermelha pega na partida entra no saldo; editar o numero da partida nao', () => {
+    store().startRun(1);
+    store().begin();
+    const world = getWorld()!;
+    world.enemies = [];
+    const step = () =>
+      store().tick({ moveX: 0, moveY: 0, dash: false }, 1 / 60);
+    // uma moeda de verdade, em cima do player
+    world.pickups.push({
+      id: 9001,
+      kind: 'ruby',
+      roomIndex: 0,
+      pos: { ...world.player.pos },
+      value: 1,
+    });
+    step();
+    expect(store().rubies).toBe(1);
+    expect(store().hud.rubies).toBe(1);
+
+    // pelo inspetor: aumentar o contador da partida, ou plantar mais moedas
+    // na mesma sala (o teto dela ja foi pago)
+    world.run.rubies = 500;
+    for (let i = 0; i < 20; i++) {
+      world.pickups.push({
+        id: 9100 + i,
+        kind: 'ruby',
+        roomIndex: 0,
+        pos: { ...world.player.pos },
+        value: 50,
+      });
+    }
+    step();
+    expect(store().rubies).toBe(1);
+  });
 });

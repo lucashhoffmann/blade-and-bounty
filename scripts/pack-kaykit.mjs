@@ -37,8 +37,17 @@ const CHARACTERS = [
   'Ranger',
   'Barbarian',
 ];
-// o que vai na mao: .gltf com .bin e textura ao lado
-const PROPS = ['sword_1handed.gltf', 'sword_1handed.bin', 'knight_texture.png'];
+// O que vai na mao (skins de arma, skins.constants). Cada um e um .gltf com
+// .bin e textura ao lado: o script copia o .gltf e tudo que ele cita.
+const PROPS = [
+  'sword_1handed',
+  'dagger',
+  'axe_1handed',
+  'wand',
+  'staff',
+  'sword_2handed_color',
+  'axe_2handed',
+];
 // do pacote Skeletons: mesmo esqueleto (Rig_Medium), mesmos clipes
 const SKELETONS = [
   'Skeleton_Warrior',
@@ -46,13 +55,7 @@ const SKELETONS = [
   'Skeleton_Rogue',
   'Skeleton_Mage',
 ];
-const SKELETON_PROPS = [
-  'Skeleton_Blade.gltf',
-  'Skeleton_Blade.bin',
-  'Skeleton_Axe.gltf',
-  'Skeleton_Axe.bin',
-  'skeleton_texture.png',
-];
+const SKELETON_PROPS = ['Skeleton_Blade', 'Skeleton_Axe', 'Skeleton_Staff'];
 
 const FLOAT = 5126;
 const SIZE = { SCALAR: 1, VEC3: 3, VEC4: 4 };
@@ -191,6 +194,18 @@ function pack(animations) {
   ]);
 }
 
+// copia `<name>.gltf` e os arquivos que ele aponta (.bin e textura)
+function copyProp(from, name) {
+  const file = `${name}.gltf`;
+  copyFileSync(join(from, file), join(OUT, file));
+  const { buffers = [], images = [] } = JSON.parse(
+    readFileSync(join(from, file), 'utf8'),
+  );
+  for (const { uri } of [...buffers, ...images]) {
+    copyFileSync(join(from, uri), join(OUT, uri));
+  }
+}
+
 const [animations, adventurers, skeletons] = process.argv.slice(2);
 if (!animations || !adventurers) {
   console.error(
@@ -215,10 +230,7 @@ if (skeletons) {
       join(OUT, `${name.toLowerCase().replace('_', '-')}.glb`),
     );
   }
-  for (const name of SKELETON_PROPS) {
-    copyFileSync(join(skeletons, 'assets/gltf', name), join(OUT, name));
-  }
+  for (const name of SKELETON_PROPS)
+    copyProp(join(skeletons, 'assets/gltf'), name);
 }
-for (const name of PROPS) {
-  copyFileSync(join(adventurers, 'Assets/gltf', name), join(OUT, name));
-}
+for (const name of PROPS) copyProp(join(adventurers, 'Assets/gltf'), name);

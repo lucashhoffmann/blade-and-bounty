@@ -2,15 +2,20 @@ import { COLORS } from '@/shared/colors';
 import { create } from 'zustand';
 
 import {
+  BLADE_IDS,
+  type BladeId,
+  DEFAULT_BLADE,
   DEFAULT_OUTFIT,
   OUTFIT_IDS,
   type OutfitId,
 } from '@/app/modules/skins/constants/skins.constants';
 import { takeRubies } from '@/app/modules/vault/systems/vault.system';
 import {
+  buyBlade,
   buyOutfit,
   credit,
   owns,
+  ownsBlade,
   readWallet,
   restoreWallet,
   saveWallet,
@@ -158,6 +163,8 @@ export type PlayerLook = {
   weapon: number;
   // qual personagem de modelo o player usa (character-models.config.ts)
   outfit: OutfitId;
+  // o que ele leva na mao no lugar da espada; so desenho
+  blade: BladeId;
 };
 
 export { OUTFIT_IDS, type OutfitId };
@@ -176,6 +183,7 @@ export const DEFAULT_LOOK: PlayerLook = {
   feet: 1,
   weapon: 1,
   outfit: DEFAULT_OUTFIT,
+  blade: DEFAULT_BLADE,
 };
 
 export const DEFAULT_BLOOD_COLOR = COLORS.ui.bloodDefault;
@@ -243,8 +251,16 @@ function mergeLook(look: PlayerLook, patch: Partial<PlayerLook>): PlayerLook {
   if (patch.outfit && OUTFIT_IDS.includes(patch.outfit) && owns(patch.outfit)) {
     next.outfit = patch.outfit;
   }
+  if (
+    patch.blade &&
+    BLADE_IDS.includes(patch.blade) &&
+    ownsBlade(patch.blade)
+  ) {
+    next.blade = patch.blade;
+  }
   // save antigo, de antes de existir a escolha
   next.outfit ??= DEFAULT_LOOK.outfit;
+  next.blade ??= DEFAULT_LOOK.blade;
   return next;
 }
 
@@ -259,8 +275,10 @@ type GameStore = {
   // e skins compradas. Quem manda e a carteira
   rubies: number;
   owned: OutfitId[];
+  blades: BladeId[];
   // compra a skin e ja veste; devolve se comprou
   buyOutfit: (id: OutfitId) => boolean;
+  buyBlade: (id: BladeId) => boolean;
   look: PlayerLook;
   bloodColor: string;
   idleWarnings: number;
@@ -527,6 +545,14 @@ export const useGameStore = create<GameStore>()(
           });
           return true;
         },
+        buyBlade: (id) => {
+          if (!buyBlade(id)) return false;
+          set({
+            ...readWallet(),
+            look: mergeLook(get().look, { blade: id }),
+          });
+          return true;
+        },
         look: DEFAULT_LOOK,
         bloodColor: DEFAULT_BLOOD_COLOR,
         idleWarnings: 0,
@@ -786,14 +812,22 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 // que a carteira nao tem volta para a padrao.
 useGameStore.subscribe((state) => {
   const wallet = readWallet();
+  const match = (shown: string[], real: string[]) =>
+    shown.length === real.length && shown.every((id) => real.includes(id));
   const same =
     state.rubies === wallet.rubies &&
-    state.owned.length === wallet.owned.length &&
-    state.owned.every((id) => wallet.owned.includes(id));
-  const dressed = owns(state.look.outfit);
+    match(state.owned, wallet.owned) &&
+    match(state.blades, wallet.blades);
+  const dressed = owns(state.look.outfit) && ownsBlade(state.look.blade);
   if (same && dressed) return;
   useGameStore.setState({
     ...wallet,
-    ...(!dressed && { look: { ...state.look, outfit: DEFAULT_OUTFIT } }),
+    ...(!dressed && {
+      look: {
+        ...state.look,
+        outfit: owns(state.look.outfit) ? state.look.outfit : DEFAULT_OUTFIT,
+        blade: ownsBlade(state.look.blade) ? state.look.blade : DEFAULT_BLADE,
+      },
+    }),
   });
 });

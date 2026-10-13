@@ -8,8 +8,24 @@ import { useTexts } from '@/shared/i18n';
 
 export function CharacterPage() {
   const t = useTexts();
-  const { canvasRef, look, setLook, weapon, setWeapon, previews, backToMenu } =
-    useCharacterPage();
+  const {
+    canvasRef,
+    look,
+    setLook,
+    shown,
+    setShown,
+    rubies,
+    owned,
+    buyOutfit,
+    shownBlade,
+    setShownBlade,
+    blades,
+    buyBlade,
+    weapon,
+    setWeapon,
+    previews,
+    backToMenu,
+  } = useCharacterPage();
 
   return (
     <main className='flex h-full flex-col md:flex-row'>
@@ -30,6 +46,15 @@ export function CharacterPage() {
       <div className='flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto p-6 md:flex-none md:[justify-content:safe_center]'>
         <LookEditor
           look={look}
+          shown={shown}
+          shownBlade={shownBlade}
+          owned={owned}
+          blades={blades}
+          rubies={rubies}
+          onShow={setShown}
+          onShowBlade={setShownBlade}
+          onBuy={buyOutfit}
+          onBuyBlade={buyBlade}
           onChange={setLook}
         />
         <WeaponPicker

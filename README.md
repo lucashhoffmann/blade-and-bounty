@@ -32,7 +32,7 @@ Os adaptadores de modelo (`src/app/engine/characters`, `src/app/engine/scenery`)
 - **Combate:** aproxime-se por trás para um golpe furtivo, use espada ou armas de alcance e desvie dos ataques com o salto de esquiva.
 - **Chefe:** a cada duas caçadas, a última sala antes do mercador é a arena de um chefe. A arena tranca até ele cair.
 - **Progressão:** as salas trazem dinheiro, caixas destrutíveis e itens de cura, escudo ou salto. A cada contrato há uma loja com preços variáveis.
-- **Personalização:** ajuste a aparência do personagem e a cor do sangue na tela inicial.
+- **Skins:** moedas vermelhas, raras, aparecem em caixas, no baú dourado e com o chefe (só no jogo solo). Compram skins na loja da tela inicial: todos os personagens do kit e as armas de mão (adaga, machado, cajado...), com preço fixo. Skin de arma só muda a aparência.
 - **Análise da partida:** ao morrer, consulte acertos, erros, dano, vida recuperada e o registro de eventos. O recorde e algumas preferências ficam salvos no navegador.
 - **Instalação:** o jogo pode ser instalado como PWA em dispositivos compatíveis e mantém os arquivos necessários em cache para jogar offline depois do primeiro carregamento.
 

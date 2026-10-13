@@ -168,25 +168,27 @@ describe('cenario do kit', () => {
     renderer.dispose();
   });
 
-  it('mobilia e pilar: um por tile, do kit com o pe no chao, ou caixa sem peca', async () => {
-    // mesa tem peca no kit de mentira; pilar nao, e sai a caixa
+  it('mobilia vem do kit com o pe no chao e vira destrocos; pilar sem peca e um bloco', async () => {
+    // mesa tem peca no kit de mentira; pilar nao
     const { world, scene, renderer } = setup({ 9: '#..T...P..#' });
     renderer.sync(world, 1);
     await arrive();
     renderer.sync(world, 1.1);
-    const items = scene.getObjectsByProperty('name', 'furniture');
-    expect(items).toHaveLength(2);
-    const [table, pillar] = items;
-    expect(table.getObjectByName('table')).toBeDefined();
-    // linha 9 do template = y de 3 a 4
-    expect(table.position.x).toBeCloseTo(3.5);
-    expect(table.position.z).toBeCloseTo(-3.5);
+    const table = scene.getObjectByName('table')!;
     scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(table);
+    // linha 9 do template = y de 3 a 4
+    expect((box.min.x + box.max.x) / 2).toBeCloseTo(3.5);
+    expect((box.min.z + box.max.z) / 2).toBeCloseTo(-3.5);
     expect(box.min.y).toBeCloseTo(0);
     expect(box.max.x - box.min.x).toBeLessThan(1);
+    const pillar = scene.getObjectByName('pillar')!;
     expect(pillar.position.x).toBeCloseTo(7.5);
     expect(pillar.children[0]).toBeInstanceOf(THREE.Mesh);
+
+    world.props[0].broken = true;
+    renderer.sync(world, 1.2);
+    expect(scene.getObjectByName('table')).toBeUndefined();
     renderer.dispose();
   });
 
