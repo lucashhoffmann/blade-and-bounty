@@ -16,17 +16,51 @@ const OUT = 'public/models/kaykit';
 
 // arquivo de origem (Rig_Medium_<tema>.glb) e os clipes que saem dele
 const CLIPS = {
-  General: ['Idle_A', 'Death_A', 'Hit_A', 'Throw'],
-  MovementBasic: ['Walking_A', 'Running_A'],
+  General: [
+    'Idle_A',
+    'Idle_B',
+    'Death_A',
+    'Death_B',
+    'Hit_A',
+    'Hit_B',
+    'Throw',
+  ],
+  MovementBasic: [
+    'Walking_A',
+    'Walking_B',
+    'Walking_C',
+    'Running_A',
+    'Running_B',
+  ],
   MovementAdvanced: ['Sneaking', 'Crouching', 'Dodge_Forward'],
   CombatMelee: [
     'Melee_1H_Attack_Chop',
+    'Melee_1H_Attack_Jump_Chop',
     'Melee_1H_Attack_Slice_Diagonal',
     'Melee_1H_Attack_Slice_Horizontal',
     'Melee_1H_Attack_Stab',
+    'Melee_2H_Attack_Chop',
+    'Melee_2H_Attack_Slice',
     'Melee_2H_Attack_Spin',
+    'Melee_2H_Attack_Stab',
+    'Melee_Block_Hit',
   ],
-  CombatRanged: ['Ranged_1H_Shoot', 'Ranged_2H_Shoot'],
+  CombatRanged: [
+    'Ranged_1H_Aiming',
+    'Ranged_1H_Shoot',
+    'Ranged_2H_Aiming',
+    'Ranged_2H_Shoot',
+    'Ranged_Bow_Aiming_Idle',
+    'Ranged_Bow_Draw',
+    'Ranged_Bow_Release',
+  ],
+  Simulation: ['Cheering', 'Waving'],
+  Special: [
+    'Skeletons_Idle',
+    'Skeletons_Walking',
+    'Skeletons_Death',
+    'Skeletons_Taunt',
+  ],
 };
 // personagens copiados inteiros (a textura ja vem dentro do GLB)
 const CHARACTERS = [

@@ -6,7 +6,9 @@ import { loadCharacterView } from '@/app/engine/characters/character-model.loade
 import {
   ENEMY_MODELS,
   playerModel,
+  RANGED_STYLES,
 } from '@/app/engine/characters/character-models.config';
+import type { RigSpec } from '@/app/engine/characters/gltf-character.view';
 import type { CharacterView } from '@/app/engine/characters/character-view.types';
 import { loadModelKit, type ModelKit } from '@/app/engine/scenery/model-kit';
 import { SCENERY } from '@/app/engine/scenery/scenery.config';
@@ -102,8 +104,12 @@ const BOSS_TONE = -1;
 const MODEL_RUN_SPEED = 3;
 // brilho do corpo de modelo em furia (o de pecas troca o contorno)
 const RAGE_GLOW = 0x8a1010;
-// ponto do clipe de tiro em que a arma ja esta apontada
-const AIM_HOLD = 0.5;
+// corpo de modelo: quanto dura o estremecer de um golpe levado e o grito do
+// chefe ao despertar; e a partir de que distancia o golpe de quem luta de
+// perto e arremesso
+const MODEL_HIT_TIME = 0.4;
+const MODEL_TAUNT_TIME = 1.1;
+const MODEL_THROW_GAP = 1.9;
 const ADRENALINE_LEAN = 0.55;
 const IDLE_DELAY = 0.8;
 const FOLLOW_RATE = 24;
@@ -317,6 +323,13 @@ type EnemyView = Jumper & {
   deathAt: number | null;
   // ja soltou a explosao de moedas e sangue da morte
   burst: boolean;
+  // corpo de modelo: estilo de luta do que ele segura, e o que a view marca
+  // sozinha para animar (golpe levado, grito do chefe)
+  style: string;
+  lastHp: number;
+  lastState: Enemy['state'];
+  hitLeft: number;
+  tauntLeft: number;
   // corpo de modelo (ENEMY_MODELS), no lugar do de pecas; null enquanto o
   // arquivo nao chega, e para sempre em quem nao tem modelo
   body: CharacterView | null;
@@ -963,6 +976,8 @@ export function createWorldRenderer(
   };
 
   const kit = createCharacterKit(look);
+  // estilo de golpe da skin de arma do player local (so desenho)
+  const outfitStyle = playerModel(look).style ?? '';
 
   function makeCharacter(kind: CharacterKind, from = kit): Character {
     const character = from.make(kind);
@@ -2195,6 +2210,11 @@ export function createWorldRenderer(
       burst: false,
       body: null,
       removed: false,
+      style: '',
+      lastHp: Infinity,
+      lastState: 'patrol',
+      hitLeft: 0,
+      tauntLeft: 0,
     };
     // Tipo com modelo: o corpo de pecas aparece ate o arquivo chegar e some
     // quando o modelo entra. O root continua o mesmo: posicao, sombra e
@@ -2203,6 +2223,7 @@ export function createWorldRenderer(
     const faces = ENEMY_MODELS[kind] ?? [];
     const model = faces[seed % Math.max(1, faces.length)];
     if (model) {
+      view.style = model.style ?? '';
       // escondido ate o modelo chegar: o de pecas so aparece se ele falhar
       character.lean.visible = false;
       loadCharacterView(model).then(
@@ -2211,8 +2232,9 @@ export function createWorldRenderer(
           view.body = body;
           character.root.add(body.object);
           character.lean.visible = false;
-          // quem atira leva na mao a arma de alcance do jogo, no tamanho certo
-          // apesar da escala do modelo
+          // quem atira leva a arma de alcance do jogo, no tamanho certo
+          // apesar da escala do modelo, no encaixe do estilo dele (o arco
+          // vai na mao esquerda)
           if (!ENEMY_KINDS[kind].ranged) return;
           const id = kind === 'brute' ? 'crossbow' : 'bow';
           const gun = createWeaponModel(id).root;
@@ -2220,7 +2242,7 @@ export function createWorldRenderer(
           const [gripX, gripY] = GUNS[id].grip;
           gun.scale.setScalar(size);
           gun.position.set(-gripX * size, -gripY * size, 0);
-          body.slot('rightHand')?.add(gun);
+          makeGrip(body, model.rig, model.style ?? '')?.add(gun);
         },
         () => {
           character.lean.visible = true;
@@ -2337,6 +2359,31 @@ export function createWorldRenderer(
     return lines[(turn * 7 + enemy.id) % lines.length];
   }
 
+  // Encaixe de arma de alcance num corpo de modelo: um grupo no ponto do
+  // corpo que o estilo usa, virado de modo que +x dele seja a frente e +y o
+  // topo quando o personagem esta em pose de mira (`RigSpec.grips`).
+  function makeGrip(
+    body: CharacterView,
+    rig: RigSpec,
+    style: string,
+  ): THREE.Group | null {
+    const grip = rig.grips?.[style] ?? rig.grips?.[''];
+    const slot = grip && body.slot(grip.slot);
+    if (!grip || !slot) return null;
+    const forward = new THREE.Vector3(...grip.forward).normalize();
+    const up = new THREE.Vector3(...grip.up).normalize();
+    const socket = new THREE.Group();
+    socket.quaternion.setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(
+        forward,
+        up,
+        new THREE.Vector3().crossVectors(forward, up),
+      ),
+    );
+    slot.add(socket);
+    return socket;
+  }
+
   function removeEnemy(view: EnemyView) {
     view.removed = true;
     view.body?.dispose();
@@ -2387,6 +2434,13 @@ export function createWorldRenderer(
     body: CharacterView | null;
     // o modelo ainda esta a caminho: nada do corpo aparece
     pending: boolean;
+    // onde o suporte das armas de alcance encaixa, por estilo de arma
+    grips: Record<string, THREE.Group>;
+    // reacao a golpe levado: tempo que falta e se o escudo segurou
+    lastHealth: number;
+    lastHp: number;
+    hitLeft: number;
+    blocked: boolean;
     // o que o modelo leva na mao direita quando nao esta com arma de alcance
     blade: THREE.Object3D | null;
     removed: boolean;
@@ -2460,6 +2514,11 @@ export function createWorldRenderer(
         : null,
       body: null,
       pending: true,
+      grips: {},
+      lastHealth: Infinity,
+      lastHp: Infinity,
+      hitLeft: 0,
+      blocked: false,
       blade: null,
       removed: false,
       spinning: false,
@@ -2475,19 +2534,21 @@ export function createWorldRenderer(
           view.body = body;
           view.pending = false;
           jumper.character.root.add(body.object);
-          const hand = body.slot('rightHand');
-          view.blade = hand?.children[0] ?? null;
+          view.blade = body.slot('rightHand')?.children[0] ?? null;
           // As armas de alcance saem do braco de pecas e vao para a mao do
-          // modelo. O suporte foi feito para o braco (cano em -y, mao em
-          // HAND_Y): o encaixe gira isso para o eixo da mao do modelo (cano
-          // em +x) e desfaz a escala do corpo.
-          const socket = new THREE.Group();
+          // modelo, num encaixe por estilo (arco na esquerda, besta e o
+          // resto na direita). O suporte foi feito para o braco (ponta em
+          // -y, mao em HAND_Y): cada encaixe leva um ajuste que gira isso
+          // para a frente dele e desfaz a escala do corpo.
           const size = 1 / rig.scale;
-          socket.rotation.z = Math.PI / 2;
-          socket.scale.setScalar(size);
-          socket.position.x = HAND_Y * size;
-          socket.add(view.held.mount);
-          hand?.add(socket);
+          for (const style of Object.keys(rig.grips ?? {})) {
+            const fit = new THREE.Group();
+            fit.rotation.z = Math.PI / 2;
+            fit.scale.setScalar(size);
+            fit.position.x = HAND_Y * size;
+            makeGrip(body, rig, style)?.add(fit);
+            view.grips[style] = fit;
+          }
         },
         () => {
           view.pending = false;
@@ -2562,16 +2623,35 @@ export function createWorldRenderer(
       // golpe novo: decide ali se e o giro, e mantem ate ele acabar
       if (who.slash > view.lastSlash) view.spinning = who.dashCooldown > 0;
       view.lastSlash = who.slash;
+      // arma de alcance: mira e disparo do tipo dela, no encaixe dela.
+      // Sem ela: os golpes do estilo da skin de arma
+      const ranged = armed ? RANGED_STYLES[gunId] : null;
+      if (ranged !== null) {
+        (view.grips[ranged] ?? view.grips[''])?.add(held.mount);
+      }
+      // levou golpe (vida ou escudo cairam): estremece; se a vida ficou
+      // igual, foi o escudo que segurou
+      const health = who.hp + who.shield;
+      if (health < view.lastHealth && !lost) {
+        view.hitLeft = MODEL_HIT_TIME;
+        view.blocked = who.hp >= view.lastHp;
+      }
+      view.lastHealth = health;
+      view.lastHp = who.hp;
+      view.hitLeft = Math.max(0, view.hitLeft - dt);
       view.body.pose(
         {
           moving: Math.min(1, body.speed / MODEL_RUN_SPEED),
           crouching: who.crouching,
           attack: who.slash > 0 ? 1 - who.slash / SLASH_TIME : null,
           dash: who.dash > 0 ? 1 - who.dash / DASH_TIME : null,
-          // de arma na mao fica apontando; o disparo percorre o resto
-          shot: !armed
-            ? null
-            : AIM_HOLD + (1 - AIM_HOLD) * (shot > 0 ? 1 - shot / SHOT_TIME : 0),
+          // de arma de alcance na mao fica apontando
+          aiming: armed,
+          shot: armed && shot > 0 ? 1 - shot / SHOT_TIME : null,
+          hit: view.hitLeft > 0 ? 1 - view.hitLeft / MODEL_HIT_TIME : null,
+          blocked: view.blocked,
+          style: ranged ?? outfitStyle,
+          variant: who.id,
           swing: Math.max(0, body.swing),
           spinning: view.spinning,
           dead: lost,
@@ -2908,21 +2988,42 @@ export function createWorldRenderer(
         // o corpo de modelo recebe a mesma fase que o de pecas acabou de usar
         const acting = enemy.attack > 0 ? 1 - enemy.attack / SLASH_TIME : null;
         const ranged = ENEMY_KINDS[enemy.kind].ranged;
+        // Reacoes que a simulacao nao conta: a view do inimigo marca o tempo.
+        // Levou golpe (a vida caiu): estremece. Chefe que entra em alerta:
+        // grita o desafio.
+        if (enemy.hp < view.lastHp && !dead) view.hitLeft = MODEL_HIT_TIME;
+        view.lastHp = enemy.hp;
+        if (
+          enemy.kind === 'boss' &&
+          enemy.state === 'alert' &&
+          view.lastState !== 'alert'
+        ) {
+          view.tauntLeft = MODEL_TAUNT_TIME;
+        }
+        view.lastState = enemy.state;
+        view.hitLeft = Math.max(0, view.hitLeft - dt);
+        view.tauntLeft = Math.max(0, view.tauntLeft - dt);
+        // golpe de longe de quem luta de perto e arremesso (a adaga)
+        const far = world.players.every(
+          (player) =>
+            Math.hypot(player.pos.x - enemy.pos.x, player.pos.y - enemy.pos.y) >
+            MODEL_THROW_GAP,
+        );
         view.body?.pose(
           {
             moving: Math.min(1, view.character.speed / MODEL_RUN_SPEED),
             crouching: false,
-            attack: ranged ? null : acting,
+            attack: ranged || far ? null : acting,
+            throwing: !ranged && far ? acting : null,
             dash: enemy.dash > 0 ? 1 - enemy.dash / DASH_TIME : null,
             // quem atira fica de arma apontada enquanto esta em alerta
-            // (meio do clipe) e o disparo percorre a outra metade
-            shot: !ranged
-              ? null
-              : acting !== null
-                ? AIM_HOLD + (1 - AIM_HOLD) * acting
-                : enemy.state === 'alert'
-                  ? AIM_HOLD
-                  : null,
+            aiming: ranged && enemy.state === 'alert',
+            shot: ranged ? acting : null,
+            hit: view.hitLeft > 0 ? 1 - view.hitLeft / MODEL_HIT_TIME : null,
+            taunt:
+              view.tauntLeft > 0 ? 1 - view.tauntLeft / MODEL_TAUNT_TIME : null,
+            style: view.style,
+            variant: enemy.id,
             swing: Math.max(0, view.character.swing),
             spinning: false,
             dead,

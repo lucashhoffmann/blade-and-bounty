@@ -2,8 +2,12 @@ import type { CharacterModel } from '@/app/engine/characters/character-model.loa
 import {
   KAYKIT_CLIPS_URL,
   KAYKIT_MEDIUM,
+  KAYKIT_SKELETON,
 } from '@/app/engine/characters/kaykit.rig';
-import type { EnemyKind } from '@/app/modules/world/types/world.types';
+import type {
+  EnemyKind,
+  WeaponId,
+} from '@/app/modules/world/types/world.types';
 import type {
   BladeId,
   OutfitId,
@@ -15,10 +19,11 @@ import type {
 // ENEMY_MODELS (o player sempre tem modelo: e o que a tela de personagem
 // escolhe).
 
+// esqueletos tem o jeito proprio de parar, andar e desabar
 const kaykit = (file: string): CharacterModel => ({
   url: `/models/kaykit/${file}.glb`,
   clipsUrl: KAYKIT_CLIPS_URL,
-  rig: KAYKIT_MEDIUM,
+  rig: file.startsWith('skeleton') ? KAYKIT_SKELETON : KAYKIT_MEDIUM,
 });
 const SWORD = { slot: 'rightHand', url: '/models/kaykit/sword_1handed.gltf' };
 
@@ -68,8 +73,30 @@ export function playerModel(look: {
     holds: [
       { slot: 'rightHand', url: BLADE_URLS[look.blade] ?? BLADE_URLS.sword },
     ],
+    style: BLADE_STYLES[look.blade],
   };
 }
+
+// Jeito de golpear com cada skin de arma (os nomes sao os de `attackStyles`
+// do esqueleto): estocada, talho, ou as duas maos. Sem estilo, os cortes de
+// espada. So troca a animacao: o golpe em si e sempre o mesmo.
+export const BLADE_STYLES: Partial<Record<BladeId, string>> = {
+  dagger: 'stab',
+  wand: 'stab',
+  axe: 'chop',
+  skeletonAxe: 'chop',
+  staff: 'two',
+  greatsword: 'two',
+  greataxe: 'two',
+  skeletonStaff: 'two',
+};
+
+// estilo de mira e tiro de cada arma de alcance (`aimStyles`, `shotStyles`)
+export const RANGED_STYLES: Record<WeaponId, string> = {
+  bow: 'bow',
+  metalBow: 'bow',
+  crossbow: 'crossbow',
+};
 
 // Cada tipo de inimigo tem uma ou mais caras: a escolha sai do `id` dele, e
 // e so visual (a simulacao trata todos do tipo igual). Quem atira (archer,
@@ -81,19 +108,16 @@ export const ENEMY_MODELS: Partial<Record<EnemyKind, CharacterModel[]>> = {
     { ...kaykit('skeleton-minion'), holds: [BLADE] },
     { ...kaykit('skeleton-rogue'), holds: [BLADE] },
   ],
-  archer: [kaykit('ranger'), kaykit('skeleton-mage')],
+  archer: [
+    { ...kaykit('ranger'), style: 'bow' },
+    { ...kaykit('skeleton-mage'), style: 'bow' },
+  ],
   brute: [
     {
       ...kaykit('barbarian'),
-      rig: {
-        ...KAYKIT_MEDIUM,
-        // maior que os outros, e atira com as duas maos
-        scale: KAYKIT_MEDIUM.scale * 1.25,
-        clips: {
-          ...KAYKIT_MEDIUM.clips,
-          shot: { name: 'Ranged_2H_Shoot', to: 0.6 },
-        },
-      },
+      // maior que os outros, de besta
+      rig: { ...KAYKIT_MEDIUM, scale: KAYKIT_MEDIUM.scale * 1.25 },
+      style: 'crossbow',
     },
   ],
   // chefe: esqueleto guerreiro gigante, de machado
@@ -101,7 +125,8 @@ export const ENEMY_MODELS: Partial<Record<EnemyKind, CharacterModel[]>> = {
     {
       ...kaykit('skeleton-warrior'),
       holds: [AXE],
-      rig: { ...KAYKIT_MEDIUM, scale: KAYKIT_MEDIUM.scale * 1.9 },
+      rig: { ...KAYKIT_SKELETON, scale: KAYKIT_SKELETON.scale * 1.9 },
+      style: 'chop',
     },
   ],
 };
