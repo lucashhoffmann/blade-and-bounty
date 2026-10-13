@@ -200,6 +200,7 @@ const pt = {
     enemyKilled: (kind: 'knight' | 'archer' | 'brute' | 'boss') =>
       `${{ knight: 'Cavaleiro', archer: 'Arqueiro', brute: 'Bárbaro da besta', boss: 'Chefe' }[kind]} eliminado.`,
     bossAwake: 'O chefe despertou. A arena esta trancada.',
+    ruby: 'Achou uma moeda vermelha.',
     damageTaken: (lost: number, blocked: number) =>
       lost
         ? `Sofreu ${lost} de dano${blocked ? ` (${blocked} bloqueado pelo escudo)` : ''}.`
@@ -581,6 +582,7 @@ const en: typeof pt = {
     enemyKilled: (kind) =>
       `${{ knight: 'Knight', archer: 'Archer', brute: 'Crossbow barbarian', boss: 'Boss' }[kind]} eliminated.`,
     bossAwake: 'The boss has awakened. The arena is sealed.',
+    ruby: 'Found a red coin.',
     damageTaken: (lost, blocked) =>
       lost
         ? `Took ${lost} damage${blocked ? ` (${blocked} blocked by shield)` : ''}.`

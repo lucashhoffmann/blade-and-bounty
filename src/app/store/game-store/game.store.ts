@@ -1,6 +1,21 @@
 import { COLORS } from '@/shared/colors';
 import { create } from 'zustand';
 
+import {
+  DEFAULT_OUTFIT,
+  OUTFIT_IDS,
+  type OutfitId,
+} from '@/app/modules/skins/constants/skins.constants';
+import { takeRubies } from '@/app/modules/vault/systems/vault.system';
+import {
+  buyOutfit,
+  credit,
+  owns,
+  readWallet,
+  restoreWallet,
+  saveWallet,
+} from '@/app/store/game-store/wallet';
+
 import { bossMaxHp } from '@/app/modules/level/systems/level.system';
 import { persist } from 'zustand/middleware';
 
@@ -101,6 +116,8 @@ export type Hud = {
   boss: number;
   // algum inimigo em alerta: a tela pulsa em vermelho
   chased: boolean;
+  // moedas vermelhas ganhas nesta partida
+  rubies: number;
   // saltos guardados, de 0 a DASH_MAX
   dashes: number;
   // fichas de revive guardadas, de 0 a REVIVE_MAX
@@ -143,8 +160,7 @@ export type PlayerLook = {
   outfit: OutfitId;
 };
 
-export const OUTFIT_IDS = ['rogueHooded', 'rogue', 'mage'] as const;
-export type OutfitId = (typeof OUTFIT_IDS)[number];
+export { OUTFIT_IDS, type OutfitId };
 
 export const LOOK_SCALE = { min: 0.7, max: 1.4 };
 export const WEAPON_SCALE = { min: 0.4, max: 1.4 };
@@ -159,7 +175,7 @@ export const DEFAULT_LOOK: PlayerLook = {
   hands: 1,
   feet: 1,
   weapon: 1,
-  outfit: 'rogueHooded',
+  outfit: DEFAULT_OUTFIT,
 };
 
 export const DEFAULT_BLOOD_COLOR = COLORS.ui.bloodDefault;
@@ -223,7 +239,8 @@ function mergeLook(look: PlayerLook, patch: Partial<PlayerLook>): PlayerLook {
       next[key] = Math.min(range.max, Math.max(range.min, value));
     }
   }
-  if (patch.outfit && OUTFIT_IDS.includes(patch.outfit)) {
+  // so veste skin que existe e que a carteira diz que e dele
+  if (patch.outfit && OUTFIT_IDS.includes(patch.outfit) && owns(patch.outfit)) {
     next.outfit = patch.outfit;
   }
   // save antigo, de antes de existir a escolha
@@ -238,6 +255,12 @@ type GameStore = {
   arsenal: Weapon[];
   market: Market;
   best: number;
+  // copia da carteira (wallet.ts), so para a tela: saldo de moedas vermelhas
+  // e skins compradas. Quem manda e a carteira
+  rubies: number;
+  owned: OutfitId[];
+  // compra a skin e ja veste; devolve se comprou
+  buyOutfit: (id: OutfitId) => boolean;
   look: PlayerLook;
   bloodColor: string;
   idleWarnings: number;
@@ -297,6 +320,7 @@ const EMPTY_HUD: Hud = {
   invincible: 0,
   boss: 0,
   chased: false,
+  rubies: 0,
   dashes: 0,
   revives: 0,
   money: 0,
@@ -381,6 +405,7 @@ function readHud(w: World): Hud {
     boss: boss ? timeLeft(boss.hp, bossMaxHp(arena)) : 0,
     chased:
       w.player.hp > 0 && w.enemies.some((enemy) => enemy.state === 'alert'),
+    rubies: w.run.rubies,
     hp: Math.max(0, w.player.hp),
     maxHp: w.player.maxHp,
     shield: w.player.shield,
@@ -407,6 +432,9 @@ export const useGameStore = create<GameStore>()(
       let sentScores = '';
       const sync = () => {
         if (!world) return;
+        // o que o cofre da partida pagou vai para a carteira
+        const earned = multi ? 0 : takeRubies(world);
+        if (earned > 0) set(credit(earned));
         const hud = readHud(world);
         const key = world.player.arsenal
           .map((weapon) => `${weapon.id}:${weapon.ammo}`)
@@ -490,6 +518,15 @@ export const useGameStore = create<GameStore>()(
         arsenal: [],
         market: createMarket(),
         best: 0,
+        ...readWallet(),
+        buyOutfit: (id) => {
+          if (!buyOutfit(id)) return false;
+          set({
+            ...readWallet(),
+            look: mergeLook(get().look, { outfit: id }),
+          });
+          return true;
+        },
         look: DEFAULT_LOOK,
         bloodColor: DEFAULT_BLOOD_COLOR,
         idleWarnings: 0,
@@ -709,6 +746,8 @@ export const useGameStore = create<GameStore>()(
       name: 'blade-and-bounty',
       partialize: (state) => ({
         best: state.best,
+        // a carteira vai com o selo dela, nao a copia do estado
+        wallet: saveWallet(),
         look: state.look,
         bloodColor: state.bloodColor,
         intelligence: state.intelligence,
@@ -716,10 +755,12 @@ export const useGameStore = create<GameStore>()(
       }),
       // valor salvo passa pela mesma validacao de `setLook`
       merge: (saved, current) => {
-        const { best, look, bloodColor, intelligence, attackVariance } =
-          (saved ?? {}) as Partial<GameStore>;
+        const { best, look, bloodColor, intelligence, attackVariance, wallet } =
+          (saved ?? {}) as Partial<GameStore> & { wallet?: unknown };
         return {
           ...current,
+          // antes do look: `mergeLook` so aceita skin que a carteira tem
+          ...restoreWallet(wallet),
           best: best ?? current.best,
           look: mergeLook(current.look, look ?? {}),
           bloodColor:
@@ -739,3 +780,20 @@ export const useGameStore = create<GameStore>()(
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   Object.assign(window, { __shadow: { getWorld, store: useGameStore } });
 }
+
+// Trava: saldo e skins do estado sao copia da carteira. Se alguem mudar a
+// copia por fora (inspetor), ela volta ao valor da carteira; e skin vestida
+// que a carteira nao tem volta para a padrao.
+useGameStore.subscribe((state) => {
+  const wallet = readWallet();
+  const same =
+    state.rubies === wallet.rubies &&
+    state.owned.length === wallet.owned.length &&
+    state.owned.every((id) => wallet.owned.includes(id));
+  const dressed = owns(state.look.outfit);
+  if (same && dressed) return;
+  useGameStore.setState({
+    ...wallet,
+    ...(!dressed && { look: { ...state.look, outfit: DEFAULT_OUTFIT } }),
+  });
+});

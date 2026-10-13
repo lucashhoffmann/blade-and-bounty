@@ -2,6 +2,7 @@ import {
   breakPropAt,
   breakPropsNear,
   dropGolden,
+  dropRubies,
   dropLoot,
   hasLineOfSight,
   isFurniture,
@@ -10,12 +11,14 @@ import {
   tileAt,
 } from '@/app/modules/level/utils/grid.util';
 import { ITEMS } from '@/app/modules/shop/constants/shop.constants';
+import { claimRuby } from '@/app/modules/vault/systems/vault.system';
 import { eventText } from '@/shared/i18n';
 import {
   ADRENALINE_TIME,
   ATTACK_COOLDOWN,
   BOSS_AMBUSH_DAMAGE,
   BOSS_MONEY,
+  RUBY_BOSS,
   ARROW_RADIUS,
   ARROW_RANGE_MARGIN,
   DASH_MAX,
@@ -159,6 +162,13 @@ export function killEnemy(world: World, enemy: Enemy): void {
   // chefe: sempre o premio do bau dourado
   if (enemy.kind === 'boss') {
     dropGolden(world, { roomIndex: enemy.roomIndex, pos: enemy.pos });
+    if (world.mode === 'solo') {
+      dropRubies(
+        world,
+        { roomIndex: enemy.roomIndex, pos: enemy.pos },
+        RUBY_BOSS,
+      );
+    }
     return;
   }
   // alem do dinheiro, as vezes um item da tabela das caixas
@@ -522,6 +532,18 @@ export function collectPickups(world: World): void {
         at: world.run.seconds,
         ...eventText((t) => t.events.money(pickup.value)),
       });
+      return false;
+    }
+    // moeda vermelha: some do chao de qualquer jeito, mas so vale se o cofre
+    // da sala pagar (vault.system)
+    if (pickup.kind === 'ruby') {
+      if (claimRuby(world, pickup.roomIndex)) {
+        world.run.rubies++;
+        world.run.events.push({
+          at: world.run.seconds,
+          ...eventText((t) => t.events.ruby),
+        });
+      }
       return false;
     }
     // ficha de revive: guarda ate REVIVE_MAX; no teto, fica no chao

@@ -40,6 +40,9 @@ export type Room = {
   tiles: string[];
   // centro do bau da loja (tile 'C'); null = sala sem bau
   chest: Vec2 | null;
+  // sala antes da arena do chefe: segundo bau de compra, do outro lado da
+  // porta de saida (a mesma loja de `chest`); null nas outras salas
+  sideChest: Vec2 | null;
   // ja abriu o bau: os precos desta sala ja foram sorteados
   shopVisited: boolean;
   // multiplayer: centro do bau de revive (tile 'R'); null = sala sem ele
@@ -163,7 +166,10 @@ export type PickupKind =
   // so saem do bau dourado. `value` segundos sem ser visto nem ouvido
   | 'invisibility'
   // `value` segundos sem levar dano
-  | 'invincibility';
+  | 'invincibility'
+  // moeda vermelha: compra skin fora da partida. Rara, e so entra no saldo
+  // se o cofre da sala deixar (vault.system)
+  | 'ruby';
 
 export type Pickup = {
   id: number;
@@ -275,6 +281,9 @@ export type Run = {
   shops: number;
   // fichas de revive guardadas, de 0 a REVIVE_MAX
   revives: number;
+  // moedas vermelhas ganhas nesta partida. So para mostrar: o saldo de
+  // verdade e pago pelo cofre (vault.system), nao por este numero
+  rubies: number;
   // onde o player renasce: o ponto em que entrou na sala atual
   checkpoint: Vec2;
   seconds: number;

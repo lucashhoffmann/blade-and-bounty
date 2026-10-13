@@ -138,6 +138,7 @@ export function createEmptyWorld(
       kills: 0,
       shops: 0,
       revives: 0,
+      rubies: 0,
       checkpoint: startPoint(),
       seconds: 0,
       lastMovedAt: 0,

@@ -39,7 +39,10 @@ import {
 } from '@/app/engine/renderers/weapon.renderer';
 import { meleeTarget } from '@/app/modules/combat/systems/combat.system';
 import { nearbyReviveChest } from '@/app/modules/multiplayer/systems/multiplayer.system';
-import { nearbyChest } from '@/app/modules/shop/systems/shop.system';
+import {
+  chestInReach,
+  nearbyChest,
+} from '@/app/modules/shop/systems/shop.system';
 import {
   DASH_TIME,
   ENEMY_KINDS,
@@ -757,6 +760,10 @@ export function createWorldRenderer(
     shield: shieldGeometry(),
     dash: dashGeometry(),
     revive: reviveGeometry(),
+    // moeda vermelha: a mesma moeda do ouro, maior e de pe
+    ruby: new THREE.CylinderGeometry(0.1, 0.1, 0.032, 8)
+      .rotateX(Math.PI / 2)
+      .scale(2.4, 2.4, 2.4),
     invisibility: new THREE.OctahedronGeometry(0.2),
     invincibility: new THREE.IcosahedronGeometry(0.2),
     headshot: crosshairGeometry(),
@@ -855,6 +862,10 @@ export function createWorldRenderer(
     }),
     revive: new THREE.MeshLambertMaterial({
       color: COLORS.model.c3fe08a,
+      flatShading: true,
+    }),
+    ruby: new THREE.MeshLambertMaterial({
+      color: 0xe0262f,
       flatShading: true,
     }),
     // cristal meio transparente
@@ -1313,7 +1324,7 @@ export function createWorldRenderer(
   }
 
   // tampa do bau de cada sala de loja, por indice da sala
-  const chestLids = new Map<number, THREE.Object3D>();
+  const chestLids = new Map<number, THREE.Object3D[]>();
 
   // bau da loja: caixa de madeira oca com paineis claros e tampa com fecho.
   // A frente e +z (para a camera); a tampa gira na dobradica de tras.
@@ -1464,12 +1475,15 @@ export function createWorldRenderer(
       group.add(door.group);
       doors.set(room.index, { leaves: door.leaves, y });
     }
-    if (room.chest) {
+    // bau de compra; antes da arena do chefe sao dois, da mesma loja
+    const lids = [room.chest, room.sideChest].flatMap((at) => {
+      if (!at) return [];
       const chest = buildChest();
-      chest.group.position.set(room.chest.x, 0, -room.chest.y);
+      chest.group.position.set(at.x, 0, -at.y);
       group.add(chest.group);
-      chestLids.set(room.index, chest.lid);
-    }
+      return [chest.lid];
+    });
+    if (lids.length > 0) chestLids.set(room.index, lids);
     // bau de revive (multiplayer): o mesmo bau, com a cruz da ficha em cima
     if (room.reviveChest) {
       const chest = buildChest();
@@ -2815,7 +2829,7 @@ export function createWorldRenderer(
           : undefined;
       const promptAt =
         world.status === 'playing' && !world.player.shopping
-          ? (chestRoom?.chest ?? reviveAt)
+          ? ((chestRoom && chestInReach(world, chestRoom)) ?? reviveAt)
           : undefined;
       chestPrompt.visible = !!promptAt;
       if (promptAt) {
@@ -2827,9 +2841,11 @@ export function createWorldRenderer(
         world.status === 'shop' || world.player.shopping
           ? chestRoom?.index
           : undefined;
-      for (const [index, lid] of chestLids) {
+      for (const [index, lids] of chestLids) {
         const target = index === opened ? CHEST_OPEN : 0;
-        lid.rotation.x += (target - lid.rotation.x) * Math.min(1, dt * 9);
+        for (const lid of lids) {
+          lid.rotation.x += (target - lid.rotation.x) * Math.min(1, dt * 9);
+        }
       }
 
       for (const who of world.players) drawPlayer(world, who, dt, time);

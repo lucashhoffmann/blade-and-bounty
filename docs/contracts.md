@@ -116,6 +116,12 @@ pela engine. O B modelado aparece sobre o bau ao alcance.
 - nasce do tile `C` do template de loja; `Room.chest` guarda o centro
   (`null` em sala sem bau)
 - e solido como a caixa (bloqueia passagem e flecha) e nao quebra
+- antes do chefe: a sala de combate logo antes da arena (`isBossRoom(index +
+1)`) ganha dois baus em `spawnRoom`, na linha 1, um de cada lado da porta de
+  saida (colunas do meio -2 e +2, se forem chao). `Room.chest` e
+  `Room.sideChest`: a mesma loja, com `shopVisited` e precos da sala. Sem
+  guarda. `sideChest` e `null` em toda outra sala
+- `chestInReach` (shop.system) diz qual bau da sala esta ao alcance
 - pode ser aberto e fechado quantas vezes o player quiser
 - `Room.shopVisited` marca a primeira abertura: so ela sorteia precos
   (`rollMarket`) e conta em `run.shops`. Reabrir mostra os mesmos precos
@@ -145,6 +151,12 @@ type RoomTemplate = {
 
 - linha `0` de `tiles` e o fundo da sala (saida); a ultima e a entrada
 - `#` parede, `.` chao, `$` dinheiro, `C` bau da loja, `o` caixa destrutivel
+- mobilia fixa: `T` mesa, `S` estante, `B` barris de enfeite
+  (`isFurniture`). Bloqueia passagem, caminho (`findPath`) e flecha; nao
+  bloqueia visao; nao quebra nem solta item. A flecha some nela como em parede
+- `P` pilar: na simulacao e igual a parede (`isSolidTile` e `isWall`), segura
+  tambem a visao. So o desenho muda
+- nenhum waypoint de patrulha cai em mobilia ou pilar
 - nenhum waypoint de patrulha cai em caixa
 - entrada e saida: colunas 4 a 6 abertas na ultima e na primeira linha
 - sala `start` tem a ultima linha fechada

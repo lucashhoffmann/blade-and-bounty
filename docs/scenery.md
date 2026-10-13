@@ -13,7 +13,8 @@ Ha dois cenarios, e o jogo troca sozinho entre eles:
   ele nao chegar (offline sem cache, erro)
 
 A simulacao nao muda: parede continua sendo o tile `#`, caixa o tile `o`, com
-as mesmas colisoes. O kit so troca o desenho.
+as mesmas colisoes. O kit so troca o desenho. Mobilia e pilar tambem sao
+tile do template (`T`, `S`, `B`, `P`): obstaculo de verdade, com ou sem kit.
 
 ## As pecas e quem conhece o que
 
@@ -51,9 +52,18 @@ type ModelKit = {
 | bau da loja e de revive     | `chest`, com a tampa `chest_lid`                          | a tampa gira na dobradica para abrir                                                  |
 | dinheiro no chao            | `coin_stack_small`                                        | com a aura                                                                            |
 | porta de correr             | a folha de madeira de `wall_doorway`                      | duas folhas no vao, sem moldura; correm para os lados                                 |
+| mesa (tile `T`)             | `table_medium_decorated_A`                                | um por tile, centrada, com o pe no chao                                               |
+| estante (tile `S`)          | `shelves`                                                 | a de pendurar do kit, posta de pe no chao, de frente para a camera                    |
+| barris (tile `B`)           | `barrel_small_stack`                                      | pilha de barris; nao quebra (o barril que quebra e o `barrel_large` do tile `o`)      |
+| pilar (tile `P`)            | `pillar`                                                  | esticado ate a altura da parede (`height`)                                            |
 | chao variado                | `floor_tile_small_broken_A/B`, `floor_tile_small_weeds_A` | cerca de 12% dos ladrilhos de chao, sempre nos mesmos lugares                         |
 | tochas                      | `torch_mounted`                                           | nas faces de parede viradas para a camera, uma a cada 3 (na arena do chefe, a cada 2) |
 | estandartes                 | `banner_red`, `banner_blue`, `banner_green`               | na parede do fundo; vermelho na arena do chefe, as outras cores revezam por nivel     |
+
+Mobilia e pilar (`SCENERY.furniture`, pela letra do tile): colisao em
+`isFurniture` / `isWall` (`level/utils/grid.util.ts`). Sem kit, ou sem a peca,
+sai uma caixa de madeira (pilar: bloco da parede). Regras em
+`docs/contracts.md`.
 
 Continua de antes, sem peca do kit: destrocos da caixa quebrada, coracao,
 escudo e os outros itens.
@@ -99,7 +109,7 @@ sala tem sempre a mesma decoracao, sem gastar o sorteio do jogo.
 
 ## Arquivo e peso
 
-`public/models/kaykit/dungeon.glb`: 469 KB, 17 pecas, uma textura e um
+`public/models/kaykit/dungeon.glb`: 619 KB, 21 pecas, uma textura e um
 material. Baixa uma vez ao abrir a partida; o service worker guarda.
 
 No pacote original cada peca e um `.gltf` com o proprio `.bin`, e todas
@@ -142,9 +152,11 @@ muda.
 
 ## O que falta
 
-- **mais decoracao**: mesa, estante, barril de enfeite, pilar e o resto do
-  pacote nao entram. Sao objetos de chao: pedem lugar no template da sala
-  (ou virar obstaculo de verdade) para nao parecer que da para atravessar
+- **mais mobilia**: cadeira, banco, cama e o resto do pacote nao entram.
+  Entram como a mesa: letra nova em `isFurniture`, linha em
+  `SCENERY.furniture` e em `PIECES`, e lugar no template
+- **mobilia de mais de um tile** (mesa comprida): cada letra ocupa um tile so
+- **pilar nao pega a cor do contrato**: so parede e piso sao tingidos
 - **parede e um bloco por tile**: quina e ponta de parede usam o mesmo bloco,
   sem peca propria de canto
 - **destrocos**: caixa quebrada vira as tabuas antigas, na cor da variacao

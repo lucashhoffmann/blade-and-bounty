@@ -4,7 +4,7 @@ import {
   KAYKIT_MEDIUM,
 } from '@/app/engine/characters/kaykit.rig';
 import type { EnemyKind } from '@/app/modules/world/types/world.types';
-import type { OutfitId } from '@/app/store/game-store/game.store';
+import type { OutfitId } from '@/app/modules/skins/constants/skins.constants';
 
 // O unico arquivo desta pasta que sabe que jogo e este: quem usa que modelo.
 // Tipo fora da lista continua com o personagem de pecas
@@ -19,15 +19,24 @@ const kaykit = (file: string): CharacterModel => ({
 });
 const SWORD = { slot: 'rightHand', url: '/models/kaykit/sword_1handed.gltf' };
 
-// o player escolhe o personagem na tela de configuracao (`look.outfit`)
+const BLADE = { slot: 'rightHand', url: '/models/kaykit/Skeleton_Blade.gltf' };
+const AXE = { slot: 'rightHand', url: '/models/kaykit/Skeleton_Axe.gltf' };
+
+// Skins do player: compradas na loja da tela inicial (`look.outfit`,
+// skins.constants). Todos os personagens do kit, do ladino ao esqueleto
+// guerreiro; a simulacao e a mesma para todos.
 export const PLAYER_OUTFITS: Record<OutfitId, CharacterModel> = {
   rogueHooded: { ...kaykit('rogue-hooded'), holds: [SWORD] },
   rogue: { ...kaykit('rogue'), holds: [SWORD] },
   mage: { ...kaykit('mage'), holds: [SWORD] },
+  ranger: { ...kaykit('ranger'), holds: [SWORD] },
+  barbarian: { ...kaykit('barbarian'), holds: [SWORD] },
+  knight: { ...kaykit('knight'), holds: [SWORD] },
+  skeletonMinion: { ...kaykit('skeleton-minion'), holds: [BLADE] },
+  skeletonRogue: { ...kaykit('skeleton-rogue'), holds: [BLADE] },
+  skeletonMage: { ...kaykit('skeleton-mage'), holds: [BLADE] },
+  skeletonWarrior: { ...kaykit('skeleton-warrior'), holds: [AXE] },
 };
-
-const BLADE = { slot: 'rightHand', url: '/models/kaykit/Skeleton_Blade.gltf' };
-const AXE = { slot: 'rightHand', url: '/models/kaykit/Skeleton_Axe.gltf' };
 
 // Cada tipo de inimigo tem uma ou mais caras: a escolha sai do `id` dele, e
 // e so visual (a simulacao trata todos do tipo igual). Quem atira (archer,

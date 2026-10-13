@@ -38,6 +38,7 @@ import {
   KNIGHT_CHANCE,
   KNIGHT_FROM_ROOM,
   ROOM_ENEMY_MAX,
+  ROOM_W,
   ROOMS_AHEAD,
   ROOMS_BEHIND,
   ROOMS_PER_EXTRA_ENEMY,
@@ -143,18 +144,31 @@ export function spawnRoom(
   index: number,
   template: RoomTemplate = pickTemplate(world, index),
 ): void {
-  const chestRow = template.tiles.findIndex((line) => line.includes('C'));
+  // Antes da arena do chefe: dois baus de compra colados na parede do fundo,
+  // um de cada lado da porta, sem guarda. E a chance de se preparar
+  const armory = template.kind === 'combat' && isBossRoom(index + 1);
+  const tiles = [...template.tiles];
+  if (armory) {
+    const middle = Math.floor(ROOM_W / 2);
+    tiles[1] = [...tiles[1]]
+      .map((tile, col) =>
+        Math.abs(col - middle) === 2 && tile === '.' ? 'C' : tile,
+      )
+      .join('');
+  }
+  const chestRow = tiles.findIndex((line) => line.includes('C'));
+  const chestCol = chestRow < 0 ? -1 : tiles[chestRow].indexOf('C');
+  const sideCol = chestRow < 0 ? -1 : tiles[chestRow].lastIndexOf('C');
   const reviveRow = template.tiles.findIndex((line) => line.includes('R'));
   world.rooms.push({
     index,
     templateId: template.id,
     kind: template.kind,
     // copia: quebrar caixa edita os tiles desta sala, nao do template
-    tiles: [...template.tiles],
-    chest:
-      chestRow < 0
-        ? null
-        : tileCenter(index, template.tiles[chestRow].indexOf('C'), chestRow),
+    tiles,
+    chest: chestRow < 0 ? null : tileCenter(index, chestCol, chestRow),
+    sideChest:
+      sideCol === chestCol ? null : tileCenter(index, sideCol, chestRow),
     shopVisited: false,
     reviveChest:
       reviveRow < 0
@@ -253,7 +267,7 @@ export function spawnRoom(
 
   // bau da loja tem guarda
   const chest = world.rooms[world.rooms.length - 1].chest;
-  if (chest) spawnGuards(world, index, chest);
+  if (chest && !armory) spawnGuards(world, index, chest);
 
   // bau dourado: uma das caixas da sala de combate, as vezes; com guarda
   if (template.kind !== 'combat') return;

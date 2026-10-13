@@ -16,6 +16,7 @@ import type {
   ItemId,
   Market,
   Room,
+  Vec2,
   Weapon,
   World,
 } from '@/app/modules/world/types/world.types';
@@ -121,12 +122,17 @@ export function buyItem(world: World, id: ItemId): boolean {
   return true;
 }
 
+// bau de compra da sala ao alcance do player (antes do chefe sao dois)
+export function chestInReach(world: World, room: Room): Vec2 | undefined {
+  return [room.chest, room.sideChest].find(
+    (chest): chest is Vec2 =>
+      !!chest && distance(world.player.pos, chest) <= CHEST_RANGE,
+  );
+}
+
 // sala cujo bau esta ao alcance do player
 export function nearbyChest(world: World): Room | undefined {
-  return world.rooms.find(
-    (room) =>
-      room.chest && distance(world.player.pos, room.chest) <= CHEST_RANGE,
-  );
+  return world.rooms.find((room) => chestInReach(world, room));
 }
 
 // tecla B perto do bau abre a loja, quantas vezes quiser. Precos novos so na

@@ -347,6 +347,20 @@ export const INVISIBILITY_MAX = 12;
 export const INVINCIBILITY_MIN = 4;
 export const INVINCIBILITY_MAX = 8;
 
+// Moeda vermelha (`ruby`): compra skin na loja da tela inicial. So no solo.
+// De onde sai: caixa quebrada ou inimigo morto (RUBY_LOOT_CHANCE, na tabela
+// das caixas), bau dourado (RUBY_GOLDEN_CHANCE) e chefe (RUBY_BOSS, sempre).
+// O cofre (vault.system) so paga ate RUBY_ROOM_CAP por sala (RUBY_BOSS_CAP na
+// arena): moeda a mais na mesma sala some sem entrar no saldo.
+// RUBIES_PER_HOUR e quanto isso rende numa hora de jogo, por estimativa: e a
+// base do preco das skins (skins.constants). Mudou uma chance, refazer a
+// conta la.
+export const RUBY_LOOT_CHANCE = 0.012;
+export const RUBY_GOLDEN_CHANCE = 0.5;
+export const RUBY_BOSS = 2;
+export const RUBY_ROOM_CAP = 1;
+export const RUBY_BOSS_CAP = 3;
+
 // multiplayer: mais dificil que o solo, e mais quanto mais gente. Cada
 // jogador alem do primeiro multiplica os inimigos da sala e adianta a
 // dificuldade em MULTI_THREAT_ROOMS salas (visao, deteccao, saltos, knights,

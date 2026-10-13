@@ -28,6 +28,7 @@ import {
   tileCenter,
 } from '@/app/modules/level/utils/grid.util';
 import { findPath } from '@/app/modules/level/utils/pathfinding.util';
+import { nearbyChest } from '@/app/modules/shop/systems/shop.system';
 import {
   AMMO_LOOT_MAX,
   AMMO_LOOT_MIN,
@@ -653,6 +654,37 @@ describe('chefe', () => {
     expect(world.enemies.map((enemy) => enemy.kind)).toEqual(['boss']);
     expect(world.props).toHaveLength(0);
     expect(world.rooms[0].kind).toBe('boss');
+  });
+
+  it('a sala antes da arena tem dois baus de compra sem guarda, um de cada lado da porta', () => {
+    for (const template of COMBAT_TEMPLATES) {
+      const world = createEmptyWorld(1);
+      spawnRoom(world, arena - 1, template);
+      const room = world.rooms[0];
+      const row = (arena - 1) * ROOM_H + ROOM_H - 2 + 0.5;
+      expect(room.chest).toEqual({ x: 3.5, y: row });
+      expect(room.sideChest).toEqual({ x: 7.5, y: row });
+      // parados num ponto so = guarda de bau; so o do bau dourado pode haver
+      const golden = world.props.some((prop) => prop.golden);
+      expect(world.enemies.filter((e) => e.patrol.length === 1)).toHaveLength(
+        golden ? 2 : 0,
+      );
+      // os dois abrem a loja, e a porta continua alcancavel
+      world.player.pos = { x: 7.5, y: row - 1 };
+      expect(nearbyChest(world)).toBe(room);
+      expect(
+        findPath(
+          world,
+          tileCenter(arena - 1, 5, ROOM_H - 2),
+          tileCenter(arena - 1, 5, 0),
+        ).length,
+      ).toBeGreaterThan(0);
+    }
+    // sala de combate comum: nenhum bau
+    const plain = createEmptyWorld(1);
+    spawnRoom(plain, 1, COMBAT_TEMPLATES[0]);
+    expect(plain.rooms[0].chest).toBeNull();
+    expect(plain.rooms[0].sideChest).toBeNull();
   });
 
   it('a vida do chefe cresce a cada chefe ja enfrentado', () => {

@@ -23,6 +23,8 @@ import {
   MELEE_RANGE,
   ROOM_H,
   ROOM_W,
+  RUBY_GOLDEN_CHANCE,
+  RUBY_LOOT_CHANCE,
   BOSS_EVERY,
   SHOP_EVERY,
   SHIELD_MAX,
@@ -80,9 +82,7 @@ export function isWall(world: World, x: number, y: number): boolean {
   const ty = Math.floor(y);
   const tile = tileAt(world, tx, ty);
   return (
-    tile === '#' ||
-    tile === 'P' ||
-    (isDoorTile(tx, ty) && !doorOpen(world, ty))
+    tile === '#' || tile === 'P' || (isDoorTile(tx, ty) && !doorOpen(world, ty))
   );
 }
 
@@ -349,6 +349,13 @@ const LOOT: {
       HEADSHOT_LOOT_MIN +
       Math.floor(roll * (HEADSHOT_LOOT_MAX - HEADSHOT_LOOT_MIN + 1)),
   },
+  {
+    // moeda vermelha: rara, e so no solo (o saldo e de quem joga sozinho)
+    kind: 'ruby',
+    chance: RUBY_LOOT_CHANCE,
+    when: (world) => world.mode === 'solo',
+    value: () => 1,
+  },
 ];
 
 // Sorteia a tabela e, se sair item, larga em `at`. Usado pela caixa quebrada
@@ -412,6 +419,26 @@ export function dropGolden(world: World, at: LootSpot): void {
       pos: { x: at.pos.x + (i - (prizes.length - 1) / 2) * 0.4, y: at.pos.y },
     });
   });
+  // as vezes, uma moeda vermelha junto, um pouco a frente do premio
+  if (world.mode === 'solo' && nextRandom(world) < RUBY_GOLDEN_CHANCE) {
+    dropRubies(world, at, 1);
+  }
+}
+
+// `count` moedas vermelhas em volta de `at` (bau dourado, chefe)
+export function dropRubies(world: World, at: LootSpot, count: number): void {
+  for (let i = 0; i < count; i++) {
+    world.pickups.push({
+      id: world.nextId++,
+      kind: 'ruby',
+      roomIndex: at.roomIndex,
+      pos: {
+        x: at.pos.x + (i - (count - 1) / 2) * 0.4,
+        y: at.pos.y - 0.35,
+      },
+      value: 1,
+    });
+  }
 }
 
 // quebrar libera o tile: a sala guarda a propria copia de `tiles`
