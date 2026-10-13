@@ -10,6 +10,31 @@ existe e uma arquitetura que se repete bem e um punhado de pecas que ja sao
 neutras. Este documento marca a fronteira para ela nao piorar e da a ordem de
 extracao para quando houver um segundo jogo.
 
+## Jogos que saem daqui
+
+| Jogo            | Pasta                        | O que mudou                                                        |
+| --------------- | ---------------------------- | ------------------------------------------------------------------ |
+| Shadow Contract | `workspace/shadow-contract`  | o original: ninja e terno, personagens de pecas, cenario de caixas |
+| Blade & Bounty  | `workspace/blade-and-bounty` | medieval: arco, besta, modelos e masmorra do KayKit, outras fontes |
+
+O Blade & Bounty foi feito pelo caminho de "Comecar um jogo novo hoje"
+(copia), nao por pacote. Por isso o codigo comum existe **duas vezes**.
+
+**Regra enquanto nao ha pacote:** correcao ou melhoria em codigo comum feita
+num jogo e copiada para o outro no mesmo dia. Vale para:
+
+- `src/app/engine/characters/*` menos `character-models.config.ts`
+- `src/app/engine/scenery/model-kit.ts`
+- `scripts/pack-kaykit*.mjs`
+- os testes dessas pastas
+
+Os arquivos sao identicos nos dois, salvo os nomes que o tema trocou no
+Blade & Bounty (`ninja` virou `knight`, `pistol` virou `bow` etc.; tabela no
+README de la). `diff -r` entre as duas pastas mostra o que divergiu.
+
+Com dois jogos, o passo "Quando virar pacote" deixou de ser hipotetico: o
+primeiro candidato e exatamente essa lista.
+
 ## As tres camadas de reuso
 
 ```text

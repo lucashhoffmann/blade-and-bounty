@@ -5,6 +5,8 @@ import { SCENERY } from '@/app/engine/scenery/scenery.config';
 
 // So vale com o kit ligado (`SCENERY.url`); desligado, nao ha arquivo.
 describe.skipIf(!SCENERY.url)('kit de cenario em public/models', () => {
+  // pulado: o corpo ainda roda para listar os testes, mas nao ha o que ler
+  if (!SCENERY.url) return it('kit desligado', () => {});
   // Le o JSON de dentro do GLB publicado, sem carregador nem WebGL.
   const file = readFileSync(`public${SCENERY.url}`);
   const kit = JSON.parse(
