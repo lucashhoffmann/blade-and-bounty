@@ -156,7 +156,7 @@ Um contrato sao `SHOP_EVERY` salas; a ultima e sempre a loja.
 ## `Enemy`
 
 ```ts
-type EnemyKind = 'knight' | 'archer' | 'brute';
+type EnemyKind = 'knight' | 'archer' | 'brute' | 'boss';
 type EnemyState = 'patrol' | 'suspicious' | 'alert' | 'dead';
 ```
 
@@ -335,6 +335,66 @@ type Projectile = {
 
 Velocidade por passo fica abaixo do diametro de colisao, entao nao atravessa
 personagem.
+
+## Perseguicao e efeitos de camera
+
+"Perseguicao" e haver algum inimigo em `alert`. So muda o que se ve:
+
+- **HUD**: `Hud.chased` fica verdadeiro, e a tela ganha a borda vermelha
+  pulsando (a mesma da vida baixa: `DamageVignette` `loop`,
+  `name='chase-vignette'`)
+- **falas**: inimigo em `alert` grita de vez em quando num balao sobre a
+  cabeca (`taunt`, em `world.renderer.ts`; textos em `game.chaseLines`, nos
+  dois idiomas). Cada um no seu ritmo, pelo `id`, e so metade fala por turno
+- **camera** (`game-engine.ts`): fecha `CHASE_ZOOM` e bate como coracao
+  (`CHASE_BEATS` por segundo), com um toque de blur em cada batida. Entra e
+  sai em `CHASE_EASE` segundos
+
+Os outros efeitos de camera, todos so visuais e somados no `fov`:
+
+| Quando                              | Efeito                                                   | Constantes                               |
+| ----------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| matar, ou levar dano                | soco: zoom curto com blur que se desfaz                  | `PUNCH_ZOOM`, `PUNCH_BLUR`, `PUNCH_TIME` |
+| acertar um golpe ou flecha          | soco menor; inteiro se for critico, overkill ou na mosca | `HIT_PUNCH`                              |
+| levar dano                          | a camera treme                                           | `HURT_SHAKE`, `HURT_TIME`                |
+| F no corpo a corpo (`player.clash`) | zoom e blur enquanto dura o foco                         | `CLASH_ZOOM`, `CLASH_BLUR`               |
+| salto                               | blur de velocidade                                       | `DASH_BLUR`                              |
+
+O blur e um so: vale o mais forte dos que estao ativos, nao a soma.
+
+## Chefe
+
+Um `Enemy` de `kind` `'boss'`, numa sala de `kind` `'boss'`.
+
+- **onde**: `isBossRoom(index)` (`grid.util`): a ultima sala antes do
+  mercador, a cada `BOSS_EVERY` cacadas (com 2, as salas 9, 19, 29...)
+- **sala**: `pickTemplate` devolve `BOSS_TEMPLATE` (`MULTI_BOSS_TEMPLATE` no
+  multiplayer): arena aberta com quatro pilares. `spawnRoom` poe so o chefe,
+  sem ronda de inimigos, caixas nem bau dourado
+- **portas**: `hasExitDoor(index)` da porta de correr tambem na entrada da
+  arena (saida da sala anterior) e na saida dela. `isDoorTile` e a engine
+  usam a mesma funcao
+- **tranca**: `arenaLocked(world, index)` vale com o chefe vivo e algum player
+  vivo dentro. Enquanto vale, `doorOpen` das duas portas da arena e falso
+  (seguram flecha e visao, a engine desenha fechadas) e `movePlayer` trata
+  porta como parede para quem esta dentro. Chefe morto, destranca
+- **despertar**: quando `run.roomIndex` chega na arena, `updateRooms` poe
+  `detection` do chefe em 1 (alerta no passo seguinte) e registra o evento
+- **vida**: `bossMaxHp(index)`: `ENEMY_KINDS.boss.hp`, mais
+  `BOSS_HP_PER_FIGHT` a cada chefe ja enfrentado
+- **combate**: corpo a corpo, com `BOSS_DAMAGE` de base e alcance
+  `BOSS_REACH`; salta como o cavaleiro. Nao morre de execucao: golpe em
+  chefe que nao viu o player tira `BOSS_AMBUSH_DAMAGE`, e o overkill pelas
+  costas em alerta nao vale para ele (vira critico)
+- **premio**: `killEnemy` solta `BOSS_MONEY` e o premio do bau dourado
+  (`dropGolden`), sem sortear a tabela das caixas
+- **HUD**: `Hud.boss` e a fracao da vida do chefe da sala do player (0 a 1,
+  passos de 5%; 0 = sem chefe). Com ela acima de 0 a tela ganha a borda
+  amarela pulsando (`DamageVignette` `color='yellow'` `loop`), o aviso que
+  despenca ao entrar e a barra de vida do chefe embaixo (`BossWarning`)
+- **desenho**: a arena e tingida de vermelho (`BOSS_TONE`, em
+  `world.renderer.ts`); o chefe e o esqueleto guerreiro, 1.9 vez maior, de
+  machado (`ENEMY_MODELS.boss`)
 
 ## `Prop` (cenario destrutivel)
 
@@ -592,7 +652,7 @@ type Market = { inflation: number; prices: Record<ItemId, number> };
 
 O preco cobrado e sempre `world.market.prices[id]`, nunca `ItemDef.price`.
 
-- entrada de dinheiro: `KILL_MONEY` por inimigo e `TILE_MONEY` por nota no
+- entrada de dinheiro: `KILL_MONEY` por inimigo e `TILE_MONEY` por pilha de moedas no
   chao. Valores fixos: a recompensa nao cresce com a sala
 - `run.earned` soma tudo o que foi coletado; `run.shops` conta lojas abertas
 - `rollMarket`, na primeira abertura do bau de cada loja:
@@ -730,8 +790,7 @@ function createGameEngine(canvas: HTMLCanvasElement): { dispose(): void };
 - parede e piso mudam a cada contrato (nivel): tom, papel de parede e
   desenho do piso (uma repeticao por tile) derivados so do
   indice do nivel (`wallpaper` em `world.renderer.ts`), sem campo no `World`
-- ao matar (inimigo passa a `dead`), a engine solta uma explosao de notas de
-  dinheiro e gotas de sangue, junto com o zoom e o blur da camera. So
+- ao matar (inimigo passa a `dead`), a engine solta uma explosao de moedas de ouro e gotas de sangue, junto com o zoom e o blur da camera. So
   visual: nao da dinheiro (quem da e o `Pickup` da morte)
 - animacao so visual, derivada do `World` a cada frame: inclinar ao andar,
   cabeca olhando para os lados quando parado, golpe de espada, zoom com blur

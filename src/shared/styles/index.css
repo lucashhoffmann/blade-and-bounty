@@ -40,10 +40,11 @@
   --animate-hud-pop: hud-pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4);
   --animate-hud-in: hud-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
   --animate-streak: streak 1.9s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
-  --font-hit: 'MedievalSharp', 'Pirata One', Georgia, serif;
-  --font-display: 'Pirata One', 'Palatino Linotype', Georgia, serif;
-  /* texto corrido da interface */
-  --font-sans: 'Alegreya', 'Palatino Linotype', Georgia, serif;
+  /* so o nome do jogo e medieval; o resto e para ler rapido */
+  --font-title: 'Pirata One', 'Palatino Linotype', Georgia, serif;
+  --font-hit: 'Alegreya Sans', system-ui, sans-serif;
+  --font-display: 'Alegreya Sans', system-ui, sans-serif;
+  --font-sans: 'Alegreya Sans', system-ui, sans-serif;
 }
 
 /* dano: bate forte, pulsa uma vez e some */
@@ -141,41 +142,33 @@
   }
 }
 
-/* lampada falhando: quase o tempo todo acesa, com piscadas curtas e
-   irregulares e um apagao mais longo por ciclo */
+/* chama do lampiao: nunca apaga, so tremula, com um sopro mais forte por
+   ciclo */
 @keyframes spotlight-flicker {
   0%,
-  17%,
-  19%,
-  21%,
-  23%,
-  52%,
-  54%,
-  71%,
-  78%,
-  80%,
   100% {
     opacity: 1;
   }
-  18%,
-  22% {
-    opacity: 0.25;
+  12% {
+    opacity: 0.86;
   }
   20% {
-    opacity: 0.7;
+    opacity: 0.97;
   }
-  53% {
-    opacity: 0.4;
+  34% {
+    opacity: 0.8;
   }
-  72%,
-  77% {
-    opacity: 0.08;
+  41% {
+    opacity: 0.95;
   }
-  74% {
-    opacity: 0.3;
+  63% {
+    opacity: 0.88;
   }
-  79% {
-    opacity: 0.55;
+  70% {
+    opacity: 0.62;
+  }
+  76% {
+    opacity: 0.93;
   }
 }
 
@@ -186,7 +179,7 @@
 
 /* a luz em si (facho, lente e poca): tudo falha junto */
 .spotlight-light {
-  animation: spotlight-flicker 6.5s linear infinite;
+  animation: spotlight-flicker 3.2s ease-in-out infinite;
 }
 
 /* dica do joystick: o botao percorre um infinito (lemniscata) em volta do

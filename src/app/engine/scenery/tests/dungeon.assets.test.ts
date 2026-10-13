@@ -37,6 +37,7 @@ describe.skipIf(!SCENERY.url)('kit de cenario em public/models', () => {
       SCENERY.goldenChest,
       SCENERY.money,
       ...SCENERY.props,
+      ...Object.values(SCENERY.furniture ?? {}),
     ].map((placed) => placed.piece);
     for (const piece of pieces) expect(names).toContain(`piece_${piece}`);
   });

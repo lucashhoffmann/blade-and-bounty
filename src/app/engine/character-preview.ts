@@ -2,19 +2,22 @@ import { COLORS } from '@/shared/colors';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
+import { PLAYER_OUTFITS } from '@/app/engine/characters/character-models.config';
+import type {
+  CharacterPose,
+  CharacterView,
+} from '@/app/engine/characters/character-view.types';
 import {
-  type CharacterKit,
-  createCharacterKit,
-} from '@/app/engine/renderers/character.renderer';
-import {
-  createHeldGuns,
-  type HeldGuns,
+  createWeaponModel,
+  GUNS,
+  type WeaponModel,
 } from '@/app/engine/renderers/weapon.renderer';
 import type { WeaponId } from '@/app/modules/world/types/world.types';
 import type { PlayerLook } from '@/app/store/game-store/game.store';
 
-// Preview do player na tela de personagem: arrastar gira, roda do mouse
-// aproxima. Desenha so quando algo muda; nao tem loop.
+// Preview do player na tela de personagem: o mesmo modelo da partida, parado
+// e respirando. Arrastar gira, roda do mouse aproxima.
 
 export type CharacterPreview = {
   setLook: (look: PlayerLook) => void;
@@ -22,6 +25,19 @@ export type CharacterPreview = {
   setWeapon: (id: WeaponId | null) => void;
   dispose: () => void;
 };
+
+const REST: CharacterPose = {
+  moving: 0,
+  crouching: false,
+  attack: null,
+  dash: null,
+  shot: null,
+  swing: 0,
+  spinning: false,
+  dead: false,
+};
+// ponto do clipe de tiro em que a arma ja esta apontada
+const AIM = 0.5;
 
 export function createCharacterPreview(
   canvas: HTMLCanvasElement,
@@ -31,7 +47,7 @@ export function createCharacterPreview(
 
   // mesma luz e fundo do jogo, para a cor do preview ser a cor da run
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(COLORS.model.c1f2033);
+  scene.background = new THREE.Color(COLORS.ui.background);
   scene.add(
     new THREE.HemisphereLight(COLORS.model.cffffff, COLORS.model.c444466, 1.8),
   );
@@ -41,7 +57,7 @@ export function createCharacterPreview(
 
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(1.2, 48),
-    new THREE.MeshLambertMaterial({ color: COLORS.model.c4a4f6a }),
+    new THREE.MeshLambertMaterial({ color: COLORS.ui.border }),
   );
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
@@ -57,49 +73,81 @@ export function createCharacterPreview(
   controls.maxPolarAngle = Math.PI / 2;
   controls.update();
 
-  const draw = () => renderer.render(scene, camera);
-  controls.addEventListener('change', draw);
-
   const resize = () => {
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
     camera.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
     camera.updateProjectionMatrix();
-    draw();
   };
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
 
-  let kit: CharacterKit | null = null;
-  let root: THREE.Group | null = null;
-  let held: HeldGuns | null = null;
+  let look: PlayerLook | null = null;
+  let body: CharacterView | null = null;
+  let blade: THREE.Object3D | null = null;
+  let gun: WeaponModel | null = null;
   let weapon: WeaponId | null = null;
-  const clear = () => {
-    if (root) scene.remove(root);
-    held?.dispose();
-    kit?.dispose();
+  let disposed = false;
+
+  // troca o que esta na mao do modelo atual
+  const hold = () => {
+    gun?.root.removeFromParent();
+    gun?.dispose();
+    gun = null;
+    if (blade) blade.visible = !weapon;
+    const hand = body?.slot('rightHand');
+    if (!weapon || !hand || !look) return;
+    // a arma do jogo, no tamanho certo apesar da escala do modelo
+    gun = createWeaponModel(weapon);
+    const size =
+      (GUNS[weapon].scale * look.weapon) /
+      PLAYER_OUTFITS[look.outfit].rig.scale;
+    const [gripX, gripY] = GUNS[weapon].grip;
+    gun.root.scale.setScalar(size);
+    gun.root.position.set(-gripX * size, -gripY * size, 0);
+    hand.add(gun.root);
   };
 
+  // o modelo respira: o preview tem laco proprio
+  let last = performance.now();
+  let frame = requestAnimationFrame(function loop(now) {
+    frame = requestAnimationFrame(loop);
+    body?.pose({ ...REST, shot: weapon ? AIM : null }, (now - last) / 1000);
+    last = now;
+    renderer.render(scene, camera);
+  });
+
   return {
-    setLook(look) {
-      clear();
-      kit = createCharacterKit(look);
-      const character = kit.make('player');
-      root = character.root;
-      // personagem novo a cada look: a arma escolhida vai junto
-      held = createHeldGuns(character, look.weapon);
-      held.hold(weapon);
-      scene.add(root);
-      draw();
+    setLook(next) {
+      const changed = next.outfit !== look?.outfit;
+      look = next;
+      if (!changed) return hold();
+      const outfit = next.outfit;
+      void loadCharacterView(PLAYER_OUTFITS[outfit]).then(
+        (view) => {
+          // trocou de novo, ou saiu da tela, antes deste chegar
+          if (disposed || look?.outfit !== outfit) return view.dispose();
+          gun?.dispose();
+          gun = null;
+          body?.dispose();
+          body = view;
+          blade = view.slot('rightHand')?.children[0] ?? null;
+          scene.add(view.object);
+          hold();
+        },
+        () => {},
+      );
     },
     setWeapon(id) {
       weapon = id;
-      held?.hold(id);
-      draw();
+      hold();
     },
     dispose() {
+      disposed = true;
+      cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
-      clear();
+      gun?.dispose();
+      body?.dispose();
       ground.geometry.dispose();
       ground.material.dispose();
       renderer.dispose();

@@ -1,7 +1,9 @@
 import type { RoomTemplate } from '@/app/modules/world/types/world.types';
 
 // Linha 0 = fundo da sala (saida), ultima linha = entrada.
-// '#' parede, '.' chao, '$' dinheiro, 'C' bau da loja, 'o' caixa destrutivel.
+// '#' parede, '.' chao, '$' dinheiro, 'C' bau da loja, 'o' caixa destrutivel,
+// 'T' mesa, 'S' estante, 'B' barris de enfeite (mobilia fixa: bloqueia passagem
+// e flecha, nao visao), 'P' pilar (igual a parede).
 // Regras em docs/contracts.md; level.test.ts valida todo template.
 
 export const START_TEMPLATE: RoomTemplate = {
@@ -30,20 +32,50 @@ export const SHOP_TEMPLATE: RoomTemplate = {
   kind: 'shop',
   tiles: [
     '####...####',
-    '#.........#',
+    '#S.......S#',
     '#.o.....o.#',
     '#.........#',
     '#.........#',
-    '#....C....#',
+    '#..T.C.T..#',
     '#.........#',
     '#.........#',
     '#.........#',
     '#.........#',
+    '#.........#',
+    '#B.......B#',
+    '####...####',
+  ],
+  enemies: [],
+};
+
+// Arena do chefe: aberta, com quatro pilares para dar cobertura. So ele
+// dentro; a ronda dele e pelo meio.
+export const BOSS_TEMPLATE: RoomTemplate = {
+  id: 'boss',
+  kind: 'boss',
+  tiles: [
+    '####...####',
+    '#.........#',
+    '#.........#',
+    '#..P...P..#',
+    '#.........#',
+    '#.........#',
+    '#.........#',
+    '#.........#',
+    '#.........#',
+    '#..P...P..#',
     '#.........#',
     '#.........#',
     '####...####',
   ],
-  enemies: [],
+  enemies: [
+    {
+      path: [
+        [5, 4],
+        [5, 8],
+      ],
+    },
+  ],
 };
 
 export const COMBAT_TEMPLATES: RoomTemplate[] = [
@@ -52,13 +84,13 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
     kind: 'combat',
     tiles: [
       '####...####',
-      '#.........#',
+      '#B.......B#',
       '#.........#',
       '#..##.##..#',
       '#.o.....o.#',
       '#....$....#',
       '#.........#',
-      '#.........#',
+      '#....T....#',
       '#..##.##..#',
       '#.........#',
       '#...o.....#',
@@ -85,7 +117,7 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
     kind: 'combat',
     tiles: [
       '####...####',
-      '#.........#',
+      '#S.......S#',
       '#.##...##.#',
       '#.##...##.#',
       '#.........#',
@@ -121,11 +153,11 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
       '#.........#',
       '#.........#',
       '#######...#',
-      '#.........#',
+      '#B........#',
       '#....$....#',
       '#.........#',
       '#...#######',
-      '#.........#',
+      '#........B#',
       '#..o...o..#',
       '#.........#',
       '#.........#',
@@ -156,12 +188,12 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
       '#.###.###.#',
       '#.#o....#.#',
       '#.#..$..#.#',
-      '#.#.....#.#',
+      '#.#..T..#.#',
       '#.###.###.#',
       '#.........#',
       '#.o.....o.#',
       '#.........#',
-      '#.........#',
+      '#B.......B#',
       '####...####',
     ],
     enemies: [
@@ -184,7 +216,7 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
     kind: 'combat',
     tiles: [
       '####...####',
-      '#.........#',
+      '#S.......S#',
       '#.........#',
       '#....#....#',
       '#....#....#',
@@ -220,11 +252,11 @@ export const COMBAT_TEMPLATES: RoomTemplate[] = [
       '#.........#',
       '#.$.....$.#',
       '#.........#',
-      '#...#.#...#',
+      '#...P.P...#',
       '#.........#',
       '#.........#',
       '#.o.....o.#',
-      '#...#.#...#',
+      '#...P.P...#',
       '#.........#',
       '#.$.....$.#',
       '#.........#',

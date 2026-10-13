@@ -1,5 +1,5 @@
 import {
-  Banknote,
+  Coins,
   ChevronsRight,
   Cross,
   Heart,
@@ -23,12 +23,12 @@ const SEGMENT_STYLE = {
   todo: 'bg-white/25 text-white',
 };
 
-// Estilo do HUD: o mesmo da home. Fonte dos titulos com contorno, paineis de
-// borda branca e sombra dura embaixo.
+// Estilo do HUD: placas de couro escuro com moldura de bronze e sombra dura
+// embaixo; vida em vermelho, escudo em aco, saltos e ouro em ambar.
 const PANEL =
-  'rounded-xl border-[3px] border-white bg-[var(--game-hudPanel)] shadow-[0_3px_0_var(--game-ink)]';
+  'rounded-md border-2 border-[var(--game-frame)] bg-[var(--game-hudPanel)]/90 shadow-[0_3px_0_var(--game-ink)]';
 const BUTTON =
-  'pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-xl border-4 border-white bg-[var(--game-secondary)] text-white shadow-[0_4px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none sm:size-11';
+  'pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-xl border-4 border-[var(--game-frame)] bg-[var(--game-secondary)] text-white shadow-[0_4px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none sm:size-11';
 // abaixo dessa fracao da vida a barra fica vermelha e pulsa
 const LOW_HEALTH = 0.3;
 
@@ -52,7 +52,7 @@ function EffectBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(left * 100)}
-        className='h-2.5 w-24 overflow-hidden rounded-full border-2 border-white bg-black/50 sm:w-40'
+        className='h-2.5 w-24 overflow-hidden rounded-full border-2 border-[var(--game-frame)] bg-black/50 sm:w-40'
       >
         <div
           className={`h-full ${color} transition-[width] duration-200 ease-linear`}
@@ -98,7 +98,7 @@ function ContractBar({ room }: { room: number }) {
                 SEGMENT_STYLE[state],
               )}
             >
-              {step === SHOP_EVERY ? '$' : ''}
+              {step === SHOP_EVERY ? '◆' : ''}
             </li>
           );
         })}
@@ -118,7 +118,7 @@ function DashPips({ dashes }: { dashes: number }) {
     >
       <ChevronsRight
         aria-hidden
-        className='size-4 text-sky-300 drop-shadow-[0_2px_0_var(--game-ink)] sm:size-5'
+        className='size-4 text-amber-300 drop-shadow-[0_2px_0_var(--game-ink)] sm:size-5'
         strokeWidth={4}
       />
       {Array.from({ length: DASH_MAX }, (_, i) => (
@@ -127,7 +127,7 @@ function DashPips({ dashes }: { dashes: number }) {
           data-state={i < dashes ? 'full' : 'empty'}
           className={cn(
             'h-2.5 w-3 -skew-x-12 rounded-xs border border-[var(--game-ink)] transition-all duration-200 sm:h-3 sm:w-4',
-            i < dashes ? 'bg-sky-400' : 'scale-75 bg-white/20',
+            i < dashes ? 'bg-amber-400' : 'scale-75 bg-white/20',
           )}
         />
       ))}
@@ -268,7 +268,7 @@ export function Hud({
           <Heart
             aria-hidden
             className={cn(
-              'size-5 shrink-0 fill-[var(--game-brandPink)] text-[var(--game-ink)] sm:size-6',
+              'size-5 shrink-0 fill-red-600 text-[var(--game-ink)] sm:size-6',
               low && 'animate-pulse',
             )}
             strokeWidth={2.5}
@@ -280,20 +280,20 @@ export function Hud({
             aria-valuemax={hud.maxHp}
             aria-valuenow={hud.hp}
             className={cn(
-              'relative flex h-4 w-20 shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-black/60 shadow-[0_3px_0_var(--game-ink)] sm:h-5 sm:w-44',
+              'relative flex h-4 w-20 shrink-0 overflow-hidden rounded-sm border-2 border-[var(--game-frame)] bg-black/60 shadow-[0_3px_0_var(--game-ink)] sm:h-5 sm:w-44',
               low && 'animate-pulse border-red-300',
             )}
           >
             <div
               className={cn(
                 'h-full bg-gradient-to-b transition-[width,background-color] duration-300',
-                low ? 'from-red-400 to-red-600' : 'from-green-400 to-green-600',
+                low ? 'from-orange-400 to-red-600' : 'from-red-500 to-red-800',
               )}
               style={{ width: `${(hud.hp / capacity) * 100}%` }}
             />
             <div
               data-testid='shield-bar'
-              className='h-full bg-gradient-to-b from-sky-300 to-sky-500 transition-[width] duration-300'
+              className='h-full bg-gradient-to-b from-slate-200 to-slate-400 transition-[width] duration-300'
               style={{ width: `${(hud.shield / capacity) * 100}%` }}
             />
             {/* brilho por cima, para a barra parecer um tubo */}
@@ -315,7 +315,7 @@ export function Hud({
               aria-label={t.common.shield}
               // no celular nao cabe ao lado da barra: la o escudo aparece so
               // como a parte azul dela
-              className='text-outline animate-hud-pop hidden text-base leading-none text-sky-300 sm:block sm:text-xl'
+              className='text-outline animate-hud-pop hidden text-base leading-none text-slate-200 sm:block sm:text-xl'
             >
               +{hud.shield}
             </p>
@@ -371,18 +371,17 @@ export function Hud({
         <div
           key={`money-${hud.money}`}
           className={cn(
-            'animate-hud-pop flex items-center gap-1 border-white bg-[var(--game-success)] px-2 py-0.5 sm:gap-1.5 sm:px-3',
+            'animate-hud-pop flex items-center gap-1 px-2 py-0.5 text-[var(--game-highlight)] sm:gap-1.5 sm:px-3',
             PANEL,
-            'bg-[var(--game-success)]',
           )}
         >
-          <Banknote
+          <Coins
             aria-hidden
             className='size-4 sm:size-5'
             strokeWidth={2.5}
           />
           <p className='text-outline text-base leading-none sm:text-xl'>
-            $ {hud.money}
+            {hud.money}
           </p>
         </div>
         {onScoreboard && (

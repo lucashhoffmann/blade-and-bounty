@@ -54,6 +54,12 @@ const pt = {
     reset: 'Restaurar padrao',
     weaponPreview: 'Arma no preview',
     weaponNote: 'So para ver como fica. Na run, a arma vem do mercador.',
+    outfit: 'Quem voce e',
+    outfits: {
+      rogueHooded: 'Ladino encapuzado',
+      rogue: 'Ladina',
+      mage: 'Maga',
+    },
   },
   lobby: {
     yourName: 'Seu nome',
@@ -95,6 +101,20 @@ const pt = {
     dashes: (count: number, max: number) => `Saltos: ${count} de ${max}`,
     arrows: (count: number, max: number) => `Flechas: ${count} de ${max}`,
     revives: (count: number) => `Fichas de revive: ${count}`,
+    loading: 'Abrindo a masmorra...',
+    boss: 'Chefe',
+    bossWarning: 'O chefe despertou!',
+    // gritos de quem esta perseguindo o player (balao sobre o inimigo)
+    chaseLines: [
+      'Ali!',
+      'Peguem!',
+      'Intruso!',
+      'Nao foge!',
+      'Cerquem!',
+      'Atras dele!',
+      'Guardas!',
+      'Parado!',
+    ],
     invisible: 'Invisibilidade',
     invincible: 'Invencibilidade',
     room: (number: number) => `Sala ${number}`,
@@ -177,8 +197,9 @@ const pt = {
       `Ficha de revive usada: restam ${remaining}.`,
     contractEnded: (room: number) => `Caçada encerrada na sala ${room}.`,
     roomReached: (room: number) => `Sala ${room} alcancada.`,
-    enemyKilled: (kind: 'knight' | 'archer' | 'brute') =>
-      `${{ knight: 'Cavaleiro', archer: 'Arqueiro', brute: 'Bárbaro da besta' }[kind]} eliminado.`,
+    enemyKilled: (kind: 'knight' | 'archer' | 'brute' | 'boss') =>
+      `${{ knight: 'Cavaleiro', archer: 'Arqueiro', brute: 'Bárbaro da besta', boss: 'Chefe' }[kind]} eliminado.`,
+    bossAwake: 'O chefe despertou. A arena esta trancada.',
     damageTaken: (lost: number, blocked: number) =>
       lost
         ? `Sofreu ${lost} de dano${blocked ? ` (${blocked} bloqueado pelo escudo)` : ''}.`
@@ -319,6 +340,10 @@ const pt = {
           ],
           ['Cavaleiro', 'corre e golpeia de perto, aguenta 2 golpes'],
           [
+            'Chefe',
+            'a cada 2 caçadas, na ultima sala antes do mercador. A arena tranca ate ele cair; golpe furtivo fere muito, mas nao mata. Solta ouro e o premio do bau dourado',
+          ],
+          [
             'Bárbaro',
             'raro, lento e sempre em dupla; besta de perto, aguenta o dobro. Guarda o bau do mercador e o bau dourado',
           ],
@@ -415,6 +440,12 @@ const en: typeof pt = {
     reset: 'Reset to default',
     weaponPreview: 'Weapon preview',
     weaponNote: 'Preview only. Get weapons from the merchant during a run.',
+    outfit: 'Who you are',
+    outfits: {
+      rogueHooded: 'Hooded rogue',
+      rogue: 'Rogue',
+      mage: 'Mage',
+    },
   },
   lobby: {
     yourName: 'Your name',
@@ -455,6 +486,19 @@ const en: typeof pt = {
     dashes: (count, max) => `Dashes: ${count} of ${max}`,
     arrows: (count, max) => `Arrows: ${count} of ${max}`,
     revives: (count) => `Revive tokens: ${count}`,
+    loading: 'Opening the dungeon...',
+    boss: 'Boss',
+    bossWarning: 'The boss has awakened!',
+    chaseLines: [
+      'There!',
+      'Get him!',
+      'Intruder!',
+      'No escape!',
+      'Surround!',
+      'After him!',
+      'Guards!',
+      'Halt!',
+    ],
     invisible: 'Invisibility',
     invincible: 'Invincibility',
     room: (number) => `Room ${number}`,
@@ -535,7 +579,8 @@ const en: typeof pt = {
     contractEnded: (room) => `Bounty ended in room ${room}.`,
     roomReached: (room) => `Reached room ${room}.`,
     enemyKilled: (kind) =>
-      `${{ knight: 'Knight', archer: 'Archer', brute: 'Crossbow barbarian' }[kind]} eliminated.`,
+      `${{ knight: 'Knight', archer: 'Archer', brute: 'Crossbow barbarian', boss: 'Boss' }[kind]} eliminated.`,
+    bossAwake: 'The boss has awakened. The arena is sealed.',
     damageTaken: (lost, blocked) =>
       lost
         ? `Took ${lost} damage${blocked ? ` (${blocked} blocked by shield)` : ''}.`
@@ -662,6 +707,10 @@ const en: typeof pt = {
             'shoots from afar, survives 2 arrows. Dodge red-tipped arrows',
           ],
           ['Knight', 'runs and strikes up close, survives 2 hits'],
+          [
+            'Boss',
+            'every 2 bounties, in the last room before the merchant. The arena stays sealed until it falls; a stealth strike hurts a lot but does not kill. Drops gold and the golden chest prize',
+          ],
           [
             'Barbarian',
             "rare, slow and always in pairs; close-range crossbow, twice as tough. Guards the merchant's chest and the golden chest",

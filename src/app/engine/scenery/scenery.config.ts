@@ -15,6 +15,18 @@ export const SCENERY: {
   goldenChest: Placed;
   money: Placed;
   door: { piece: string; leaf: string; width: number; height: number };
+  // mobilia fixa e pilar, pela letra do tile no template (`isFurniture` e
+  // 'P' em grid.util). `height`: altura da peca no kit, esticada ate a da
+  // parede do jogo. Sem isto, ou sem a peca, sai uma caixa no lugar
+  furniture?: Record<string, Placed & { height?: number }>;
+  // Decoracao: so desenho, nao bloqueia nem entra na simulacao. Tudo opcional.
+  // ladrilhos diferentes espalhados pelo chao (mesmo tamanho do `floor`)
+  floorVariants?: string[];
+  // tocha presa na face da parede virada para a camera
+  torch?: Placed;
+  // estandartes na parede do fundo; a cor muda por nivel, e a primeira e a
+  // da arena do chefe
+  banners?: string[];
 } = {
   url: '/models/kaykit/dungeon.glb',
   // ladrilho de 2 x 2 no kit: metade da um tile
@@ -43,4 +55,19 @@ export const SCENERY: {
     width: 2,
     height: 2.75,
   },
+  // cada uma no tamanho que cabe num tile; o jogo centra a peca no tile e
+  // poe o pe dela no chao (a estante do kit e de pendurar)
+  furniture: {
+    T: { piece: 'table_medium_decorated_A', scale: 0.45 },
+    S: { piece: 'shelves', scale: 0.46 },
+    B: { piece: 'barrel_small_stack', scale: 0.5 },
+    P: { piece: 'pillar', scale: 0.6, height: 4 },
+  },
+  floorVariants: [
+    'floor_tile_small_broken_A',
+    'floor_tile_small_broken_B',
+    'floor_tile_small_weeds_A',
+  ],
+  torch: { piece: 'torch_mounted', scale: 0.7 },
+  banners: ['banner_red', 'banner_blue', 'banner_green'],
 };

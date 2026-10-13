@@ -6,6 +6,7 @@ import {
   setJoystickInput,
 } from '@/app/store/game-store/game.store';
 import { VirtualJoystick } from '@/resources/components/base/virtual-joystick/virtual-joystick.component';
+import { BossWarning } from '@/resources/pages/game/components/boss-warning.component';
 import { DamageVignette } from '@/resources/pages/game/components/damage-vignette.component';
 import { GameOverDialog } from '@/resources/pages/game/components/game-over-dialog.component';
 import { Hud } from '@/resources/pages/game/components/hud.component';
@@ -23,6 +24,10 @@ const LOW_HP = 20;
 export function GamePage() {
   const {
     canvasRef,
+    loading,
+    loadingLabel,
+    bossLabel,
+    bossWarning,
     screen,
     hud,
     arsenal,
@@ -68,6 +73,25 @@ export function GamePage() {
       <DamageVignette
         hits={idleWarnings}
         color='blue'
+      />
+      {/* perseguicao: a mesma borda vermelha da vida baixa, enquanto houver
+          inimigo em alerta */}
+      <DamageVignette
+        hits={hud.chased ? 1 : 0}
+        loop
+        name='chase-vignette'
+      />
+      {/* chefe na sala: borda amarela pulsando ate ele cair, aviso e a barra
+          de vida dele */}
+      <DamageVignette
+        hits={hud.boss > 0 ? 1 : 0}
+        color='yellow'
+        loop
+      />
+      <BossWarning
+        boss={hud.boss}
+        label={bossLabel}
+        warning={bossWarning}
       />
       <Hud
         hud={hud}
@@ -133,6 +157,15 @@ export function GamePage() {
         note={waitingNote}
         onMenu={online ? leaveMatch : backToMenu}
       />
+      {loading && (
+        <div
+          role='status'
+          className='font-display absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[var(--game-homeDeep)] text-[var(--game-foreground)]'
+        >
+          <div className='size-10 animate-spin rounded-full border-4 border-[var(--game-frame)] border-t-transparent' />
+          <p className='text-lg tracking-wide uppercase'>{loadingLabel}</p>
+        </div>
+      )}
     </div>
   );
 }

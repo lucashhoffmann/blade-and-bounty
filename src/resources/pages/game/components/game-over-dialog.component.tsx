@@ -61,7 +61,7 @@ export function GameOverDialog({
         <DialogHeader className='items-center gap-3'>
           <DialogTitle className='text-outline flex flex-col text-5xl leading-none tracking-wide uppercase sm:text-6xl'>
             <span className='text-white'>{t.game.you}</span>{' '}
-            <span className='text-[1.2em] text-[var(--game-brandPink)]'>
+            <span className='text-[1.2em] text-[var(--game-brand)]'>
               {t.game.died}
             </span>
           </DialogTitle>
@@ -78,7 +78,7 @@ export function GameOverDialog({
           {onRestart && (
             <button
               type='button'
-              className='text-outline flex items-center gap-2 rounded-2xl border-4 border-white bg-[var(--game-success)] px-6 py-3 text-2xl text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none'
+              className='text-outline flex items-center gap-2 rounded-2xl border-4 border-[var(--game-frame)] bg-[var(--game-success)] px-6 py-3 text-2xl text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none'
               onClick={() => {
                 setAnalysisOpen(false);
                 onRestart();

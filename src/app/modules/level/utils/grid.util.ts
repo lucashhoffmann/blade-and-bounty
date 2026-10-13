@@ -23,11 +23,13 @@ import {
   MELEE_RANGE,
   ROOM_H,
   ROOM_W,
+  BOSS_EVERY,
   SHOP_EVERY,
   SHIELD_MAX,
   SHIELD_MIN,
 } from '@/app/modules/world/constants/world.constants';
 import type {
+  Enemy,
   PickupKind,
   Prop,
   Vec2,
@@ -55,15 +57,31 @@ export function tileAt(world: World, tx: number, ty: number): string {
 // baixa: nao bloqueia visao. Bau ('C') bloqueia igual a caixa e nao quebra.
 export function isSolidTile(tile: string): boolean {
   // bau de revive ('R') e igual ao da loja
-  return tile === '#' || tile === 'o' || tile === 'C' || tile === 'R';
+  return (
+    tile === '#' ||
+    tile === 'o' ||
+    tile === 'C' ||
+    tile === 'R' ||
+    tile === 'P' ||
+    isFurniture(tile)
+  );
 }
 
-// parede, ou porta fechada: os dois seguram flecha e visao
+// Mobilia: mesa ('T'), estante ('S') e barris de enfeite ('B'). Fixa, nao
+// quebra nem solta item. Bloqueia passagem e flecha, mas e baixa: nao bloqueia
+// visao. O pilar ('P') e alto: na simulacao e igual a parede.
+export function isFurniture(tile: string): boolean {
+  return tile === 'T' || tile === 'S' || tile === 'B';
+}
+
+// parede, pilar ou porta fechada: seguram flecha e visao
 export function isWall(world: World, x: number, y: number): boolean {
   const tx = Math.floor(x);
   const ty = Math.floor(y);
+  const tile = tileAt(world, tx, ty);
   return (
-    tileAt(world, tx, ty) === '#' ||
+    tile === '#' ||
+    tile === 'P' ||
     (isDoorTile(tx, ty) && !doorOpen(world, ty))
   );
 }
@@ -77,14 +95,51 @@ export function tileCenter(roomIndex: number, col: number, row: number): Vec2 {
   return { x: col + 0.5, y: roomIndex * ROOM_H + (ROOM_H - 1 - row) + 0.5 };
 }
 
+// Arena do chefe: a ultima sala antes do mercador, a cada BOSS_EVERY cacadas.
+export function isBossRoom(index: number): boolean {
+  return (
+    index > 0 &&
+    index % SHOP_EVERY === SHOP_EVERY - 1 &&
+    Math.ceil(index / SHOP_EVERY) % BOSS_EVERY === 0
+  );
+}
+
+// A saida da sala `index` tem porta de correr: sala inicial e mercador (a
+// entrada de cada nivel), a sala antes da arena do chefe (a entrada dela) e
+// a propria arena (a saida).
+export function hasExitDoor(index: number): boolean {
+  return index % SHOP_EVERY === 0 || isBossRoom(index + 1) || isBossRoom(index);
+}
+
 // Porta de correr: fica no vao de saida (3 colunas do meio da linha do fundo)
-// da sala inicial e de cada loja, ou seja, na entrada de cada nivel.
+// das salas de `hasExitDoor`.
 export function isDoorTile(tx: number, ty: number): boolean {
   return (
     // vao de 3 tiles no meio da parede; a largura da sala muda por modo
     Math.abs(tx - Math.floor(ROOM_W / 2)) <= 1 &&
     ty % ROOM_H === ROOM_H - 1 &&
-    Math.floor(ty / ROOM_H) % SHOP_EVERY === 0
+    hasExitDoor(Math.floor(ty / ROOM_H))
+  );
+}
+
+// chefe vivo da sala `index`, se ela e arena e ele ainda esta de pe
+export function bossOf(world: World, index: number): Enemy | undefined {
+  return world.enemies.find(
+    (enemy) =>
+      enemy.kind === 'boss' &&
+      enemy.roomIndex === index &&
+      enemy.state !== 'dead',
+  );
+}
+
+// Arena trancada: com o chefe vivo e alguem dentro, as duas portas dela
+// fecham e viram parede para o player ate ele morrer.
+export function arenaLocked(world: World, index: number): boolean {
+  return (
+    !!bossOf(world, index) &&
+    world.players.some(
+      (player) => player.hp > 0 && roomIndexAt(player.pos.y) === index,
+    )
   );
 }
 
@@ -99,6 +154,9 @@ export function doorsSealed(world: World): boolean {
 // vivo por perto. Fechada, segura flecha e visao (`isWall`); a engine desenha
 // as folhas pelo mesmo criterio.
 export function doorOpen(world: World, ty: number): boolean {
+  // a porta da linha `ty` e a saida da sala `index` e a entrada da seguinte
+  const index = Math.floor(ty / ROOM_H);
+  if (arenaLocked(world, index) || arenaLocked(world, index + 1)) return false;
   const reaches = (pos: Vec2) =>
     Math.abs(pos.y - ty) < DOOR_RANGE &&
     Math.abs(pos.x - ROOM_W / 2) < DOOR_RANGE;
@@ -317,7 +375,7 @@ export function dropLoot(world: World, at: LootSpot): void {
 // vida cheia, escudo cheio, vida cheia + escudo cheio, ou invencibilidade.
 // "Cheio" e pela maior vida maxima do grupo; o teto de quem coleta corta o
 // excesso. Invisibilidade e invencibilidade duram um tempo sorteado.
-function dropGolden(world: World, at: LootSpot): void {
+export function dropGolden(world: World, at: LootSpot): void {
   const maxHp = Math.max(...world.players.map((player) => player.maxHp));
   const heart = { kind: 'heart', value: maxHp } as const;
   const shield = {

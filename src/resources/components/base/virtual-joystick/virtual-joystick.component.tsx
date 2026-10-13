@@ -83,7 +83,7 @@ export function VirtualJoystick({
           className={cn(
             'pointer-events-auto absolute right-5 flex size-16 items-center justify-center rounded-full border-4 active:scale-90',
             crouched
-              ? 'border-white bg-[var(--game-highlight)]/80 text-[var(--game-ink)]'
+              ? 'border-[var(--game-frame)] bg-[var(--game-highlight)]/80 text-[var(--game-ink)]'
               : 'border-white/35 bg-white/10 text-white/80',
           )}
           style={{
@@ -115,7 +115,7 @@ export function VirtualJoystick({
         <button
           type='button'
           aria-label={t.common.attack}
-          className='pointer-events-auto absolute right-5 flex size-20 items-center justify-center rounded-full border-4 border-white/60 bg-[var(--game-brandPink)]/45 text-white active:scale-90 active:bg-[var(--game-brandPink)]/75'
+          className='pointer-events-auto absolute right-5 flex size-20 items-center justify-center rounded-full border-4 border-white/60 bg-[var(--game-brand)]/45 text-white active:scale-90 active:bg-[var(--game-brand)]/75'
           style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
           onPointerDown={(event) => {
             // o toque para aqui: nao comeca o joystick por baixo

@@ -13,3 +13,13 @@ it('mantem o registro da partida nos dois idiomas para cada jogador', () => {
   expect(translateSessionError('Sessao cheia.')).toBe('Session is full.');
   useLanguage.getState().setLanguage('pt-BR');
 });
+
+it('gritos de perseguicao existem nos dois idiomas, na mesma quantidade', () => {
+  useLanguage.getState().setLanguage('pt-BR');
+  const pt = getTexts().game.chaseLines;
+  useLanguage.getState().setLanguage('en');
+  const en = getTexts().game.chaseLines;
+  useLanguage.getState().setLanguage('pt-BR');
+  expect(pt.length).toBeGreaterThan(3);
+  expect(en).toHaveLength(pt.length);
+});

@@ -20,7 +20,9 @@ Nasceu do Shadow Contract (branch `feat/glb-characters`): a simulação e a engi
 | Arremesso do inimigo corpo a corpo | shuriken                                 | adaga (`dagger`)                                                           |
 | Nível                              | contrato                                 | caçada                                                                     |
 | Visual                             | personagens de peças e cenário de caixas | modelos KayKit e masmorra KayKit (`docs/characters.md`, `docs/scenery.md`) |
-| Fontes                             | Lilita One, Creepster                    | Pirata One (títulos), MedievalSharp (dano), Alegreya (texto)               |
+| Fontes                             | Lilita One, Creepster                    | Pirata One só no nome do jogo; Alegreya Sans no resto                      |
+| Paleta                             | roxo, azul e rosa                        | couro, pergaminho, ouro e ferro (`src/shared/colors.ts`)                   |
+| Personagem                         | editor de cores e proporções             | escolha entre três modelos (`look.outfit`)                                 |
 
 Os adaptadores de modelo (`src/app/engine/characters`, `src/app/engine/scenery`) existem iguais nos dois projetos. Correção feita num deles deve ser copiada para o outro: ver `docs/engine-reuse.md`.
 
@@ -28,6 +30,7 @@ Os adaptadores de modelo (`src/app/engine/characters`, `src/app/engine/scenery`)
 
 - **Furtividade:** inimigos patrulham, investigam sons e perseguem o personagem quando entram em alerta. Ficar parado por muito tempo também atrai perseguidores.
 - **Combate:** aproxime-se por trás para um golpe furtivo, use espada ou armas de alcance e desvie dos ataques com o salto de esquiva.
+- **Chefe:** a cada duas caçadas, a última sala antes do mercador é a arena de um chefe. A arena tranca até ele cair.
 - **Progressão:** as salas trazem dinheiro, caixas destrutíveis e itens de cura, escudo ou salto. A cada contrato há uma loja com preços variáveis.
 - **Personalização:** ajuste a aparência do personagem e a cor do sangue na tela inicial.
 - **Análise da partida:** ao morrer, consulte acertos, erros, dano, vida recuperada e o registro de eventos. O recorde e algumas preferências ficam salvos no navegador.

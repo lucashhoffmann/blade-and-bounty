@@ -1,8 +1,10 @@
 import {
   breakPropAt,
   breakPropsNear,
+  dropGolden,
   dropLoot,
   hasLineOfSight,
+  isFurniture,
   isSolidTile,
   isWall,
   tileAt,
@@ -12,6 +14,8 @@ import { eventText } from '@/shared/i18n';
 import {
   ADRENALINE_TIME,
   ATTACK_COOLDOWN,
+  BOSS_AMBUSH_DAMAGE,
+  BOSS_MONEY,
   ARROW_RADIUS,
   ARROW_RANGE_MARGIN,
   DASH_MAX,
@@ -150,8 +154,13 @@ export function killEnemy(world: World, enemy: Enemy): void {
     kind: 'money',
     roomIndex: enemy.roomIndex,
     pos: { ...enemy.pos },
-    value: KILL_MONEY,
+    value: enemy.kind === 'boss' ? BOSS_MONEY : KILL_MONEY,
   });
+  // chefe: sempre o premio do bau dourado
+  if (enemy.kind === 'boss') {
+    dropGolden(world, { roomIndex: enemy.roomIndex, pos: enemy.pos });
+    return;
+  }
   // alem do dinheiro, as vezes um item da tabela das caixas
   if (nextRandom(world) >= ENEMY_LOOT_CHANCE) return;
   // ao lado do corpo, para nao ficar em cima das moedas; se ali for parede
@@ -370,10 +379,13 @@ export function updateCombat(world: World, dt: number, knife = false): void {
       damageEnemy(
         world,
         unaware,
-        unaware.hp,
+        // o chefe nao morre de execucao: leva um golpe pesado
+        unaware.kind === 'boss'
+          ? Math.min(unaware.hp, BOSS_AMBUSH_DAMAGE)
+          : unaware.hp,
         lunge || (player.crouching && behind) ? 'overkill' : 'execution',
       );
-    } else if (sneak && behind) {
+    } else if (sneak && behind && struck.kind !== 'boss') {
       player.focus = 0;
       damageEnemy(world, struck, struck.hp, 'overkill');
     } else {
@@ -447,7 +459,14 @@ export function updateProjectiles(world: World, dt: number): void {
     arrow.pos.y += arrow.vel.y * dt;
     arrow.life -= dt;
     arrow.travelled += Math.hypot(arrow.vel.x, arrow.vel.y) * dt;
-    if (arrow.life <= 0 || isWall(world, arrow.pos.x, arrow.pos.y)) {
+    if (
+      arrow.life <= 0 ||
+      isWall(world, arrow.pos.x, arrow.pos.y) ||
+      // mobilia segura a flecha como parede, sem quebrar
+      isFurniture(
+        tileAt(world, Math.floor(arrow.pos.x), Math.floor(arrow.pos.y)),
+      )
+    ) {
       // flecha que acabou sem acertar ninguem. A do inimigo avisa sobre quem
       // atirou
       if (arrow.owner === 'player') addFloater(world, arrow.pos, 0);

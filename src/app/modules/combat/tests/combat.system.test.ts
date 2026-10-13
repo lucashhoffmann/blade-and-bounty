@@ -15,6 +15,8 @@ import {
 import { ITEMS } from '@/app/modules/shop/constants/shop.constants';
 import {
   ATTACK_COOLDOWN,
+  BOSS_AMBUSH_DAMAGE,
+  BOSS_MONEY,
   DASH_MAX,
   ENEMY_ARROW_DAMAGE,
   ENEMY_ARROW_SPEED,
@@ -361,6 +363,19 @@ describe('updateProjectiles', () => {
     shootUp(world);
     fly(world, 1);
     expect(enemy.hp).toBe(30);
+  });
+
+  it('mobilia segura toda flecha, sem quebrar', () => {
+    const world = createArenaWorld({ 8: '#....T....#' });
+    const enemy = addEnemy(world, 5.5, 6.5, UP);
+
+    shootUp(world);
+    fly(world, 1);
+    shootUp(world);
+    fly(world, 1);
+    expect(enemy.hp).toBe(60);
+    expect(world.projectiles).toHaveLength(0);
+    expect(world.rooms[0].tiles[8]).toBe('#....T....#');
   });
 
   it('flecha para na parede e nao acerta quem esta atras', () => {
@@ -1200,6 +1215,38 @@ describe('golpe de salto', () => {
       const sneak = strike('patrol', false, seed);
       expect(sneak.enemy.hp).toBeLessThanOrEqual(0);
       expect(sneak.hit.overkill).toBe(true);
+    }
+  });
+});
+
+describe('chefe em combate', () => {
+  it('golpe furtivo nao executa: tira BOSS_AMBUSH_DAMAGE e ele segue vivo', () => {
+    const world = createArenaWorld();
+    world.run.meleeMissChance = 0;
+    world.run.nextMeleeChanceAt = Infinity;
+    // de costas para o player, sem ter visto nada
+    const boss = addEnemy(world, 5.5, 3.3, Math.PI / 2, 'boss');
+    const full = boss.hp;
+    world.player.crouching = true;
+    fight(world, { moveX: 0, moveY: 0, dash: false }, 0);
+    expect(boss.hp).toBe(full - BOSS_AMBUSH_DAMAGE);
+    expect(boss.state).not.toBe('dead');
+  });
+
+  it('morto, solta BOSS_MONEY e o premio do bau dourado', () => {
+    const world = createArenaWorld();
+    const boss = addEnemy(world, 5.5, 6.5, 0, 'boss');
+    killEnemy(world, boss);
+    expect(world.pickups[0]).toMatchObject({
+      kind: 'money',
+      value: BOSS_MONEY,
+    });
+    const prize = world.pickups.slice(1).map((pickup) => pickup.kind);
+    expect(prize.length).toBeGreaterThan(0);
+    for (const kind of prize) {
+      expect(['heart', 'shield', 'invisibility', 'invincibility']).toContain(
+        kind,
+      );
     }
   });
 });

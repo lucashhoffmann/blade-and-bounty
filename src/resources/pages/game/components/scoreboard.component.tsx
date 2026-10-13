@@ -12,7 +12,7 @@ type ScoreboardProps = {
 function pingColor(ping: number): string {
   if (!ping) return 'text-white/50';
   if (ping <= 80) return 'text-[var(--game-success)]';
-  return ping <= 160 ? 'text-[#ffd21f]' : 'text-[var(--game-brandPink)]';
+  return ping <= 160 ? 'text-[#ffd21f]' : 'text-[var(--game-brand)]';
 }
 
 // Placar da partida: kills e mortes de cada jogador. Aparece por cima do
@@ -32,7 +32,7 @@ export function Scoreboard({ open, scores }: ScoreboardProps) {
     <div className='pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-4'>
       <table
         aria-label={t.match.scoreboard}
-        className='font-display w-full max-w-sm table-fixed overflow-hidden rounded-2xl border-4 border-white bg-[var(--game-panel)]/95 text-white shadow-[0_6px_0_var(--game-ink)]'
+        className='font-display w-full max-w-sm table-fixed overflow-hidden rounded-2xl border-4 border-[var(--game-frame)] bg-[var(--game-panel)]/95 text-white shadow-[0_6px_0_var(--game-ink)]'
       >
         <caption className='text-outline bg-[var(--game-panelTitle)] py-2 text-2xl tracking-wide uppercase'>
           {t.match.scoreboard}
@@ -71,7 +71,7 @@ export function Scoreboard({ open, scores }: ScoreboardProps) {
               >
                 <span
                   aria-hidden
-                  className='size-4 shrink-0 rounded-full border-2 border-white'
+                  className='size-4 shrink-0 rounded-full border-2 border-[var(--game-frame)]'
                   style={{ background: score.color ?? COLORS.ui.white }}
                 />
                 <span
@@ -86,7 +86,7 @@ export function Scoreboard({ open, scores }: ScoreboardProps) {
                   </span>
                 )}
                 {!score.alive && (
-                  <span className='font-sans text-xs text-[var(--game-brandPink)]'>
+                  <span className='font-sans text-xs text-[var(--game-brand)]'>
                     {t.match.dead}
                   </span>
                 )}
@@ -94,7 +94,7 @@ export function Scoreboard({ open, scores }: ScoreboardProps) {
               <td className='px-2 py-1.5 text-center text-[var(--game-success)]'>
                 {score.kills}
               </td>
-              <td className='px-2 py-1.5 text-center text-[var(--game-brandPink)]'>
+              <td className='px-2 py-1.5 text-center text-[var(--game-brand)]'>
                 {score.deaths}
               </td>
               {online && (

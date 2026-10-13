@@ -1,10 +1,12 @@
 import { createEnemy } from '@/app/modules/enemy/systems/enemy.system';
 import {
+  BOSS_TEMPLATE,
   COMBAT_TEMPLATES,
   SHOP_TEMPLATE,
   START_TEMPLATE,
 } from '@/app/modules/level/templates/room.template';
 import {
+  MULTI_BOSS_TEMPLATE,
   MULTI_COMBAT_TEMPLATES,
   MULTI_SHOP_TEMPLATE,
   MULTI_START_TEMPLATE,
@@ -14,12 +16,17 @@ import {
   threatBoost,
 } from '@/app/modules/world/utils/players.util';
 import {
+  bossOf,
   circleHitsWall,
+  isBossRoom,
   roomIndexAt,
   tileCenter,
 } from '@/app/modules/level/utils/grid.util';
 import {
+  BOSS_EVERY,
+  BOSS_HP_PER_FIGHT,
   BUDDY_CHANCE,
+  ENEMY_KINDS,
   BUDDY_GAP,
   ENEMY_RADIUS,
   BRUTE_CHANCE,
@@ -51,18 +58,21 @@ const TEMPLATES = {
   solo: {
     start: START_TEMPLATE,
     shop: SHOP_TEMPLATE,
+    boss: BOSS_TEMPLATE,
     combat: COMBAT_TEMPLATES,
   },
   multi: {
     start: MULTI_START_TEMPLATE,
     shop: MULTI_SHOP_TEMPLATE,
+    boss: MULTI_BOSS_TEMPLATE,
     combat: MULTI_COMBAT_TEMPLATES,
   },
 };
 
 export function pickTemplate(world: World, index: number): RoomTemplate {
-  const { start, shop, combat } = TEMPLATES[world.mode];
+  const { start, shop, boss, combat } = TEMPLATES[world.mode];
   if (index === 0) return start;
+  if (isBossRoom(index)) return boss;
   if (index % SHOP_EVERY === 0) return shop;
   return combat[Math.floor(nextRandom(world) * combat.length)];
 }
@@ -120,6 +130,14 @@ export function goldenChestChance(index: number): number {
   );
 }
 
+// vida cheia do chefe da arena `index`: cresce a cada chefe ja enfrentado
+export function bossMaxHp(index: number): number {
+  const fights = Math.floor(Math.ceil(index / SHOP_EVERY) / BOSS_EVERY) - 1;
+  return Math.round(
+    ENEMY_KINDS.boss.hp * (1 + Math.max(0, fights) * BOSS_HP_PER_FIGHT),
+  );
+}
+
 export function spawnRoom(
   world: World,
   index: number,
@@ -144,6 +162,19 @@ export function spawnRoom(
         : tileCenter(index, template.tiles[reviveRow].indexOf('R'), reviveRow),
     reviveFree: true,
   });
+
+  // arena: so o chefe, mais forte a cada um ja enfrentado
+  if (template.kind === 'boss') {
+    const boss = createEnemy(
+      world,
+      index,
+      template.enemies[0].path.map(([col, row]) => tileCenter(index, col, row)),
+      'boss',
+    );
+    boss.hp = bossMaxHp(index);
+    world.enemies.push(boss);
+    return;
+  }
 
   // multiplayer: mais inimigos por sala e dificuldade adiantada
   const threat = index + threatBoost(world);
@@ -244,6 +275,15 @@ export function updateRooms(world: World): void {
       at: world.run.seconds,
       ...eventText((t) => t.events.roomReached(current)),
     });
+    // entrou na arena: o chefe ja acorda em alerta
+    const boss = bossOf(world, current);
+    if (boss) {
+      boss.detection = 1;
+      world.run.events.push({
+        at: world.run.seconds,
+        ...eventText((t) => t.events.bossAwake),
+      });
+    }
   }
   world.run.roomIndex = Math.max(world.run.roomIndex, current);
 

@@ -1,4 +1,8 @@
-import { moveCircle } from '@/app/modules/level/utils/grid.util';
+import {
+  arenaLocked,
+  moveCircle,
+  roomIndexAt,
+} from '@/app/modules/level/utils/grid.util';
 import {
   ADRENALINE_BOOST,
   CROUCH_NOISE,
@@ -22,6 +26,8 @@ const DEAD_ZONE = 0.01;
 
 export function movePlayer(world: World, input: InputState, dt: number): void {
   const player = world.player;
+  // arena do chefe trancada: as portas viram parede ate ele morrer
+  const locked = arenaLocked(world, roomIndexAt(player.pos.y));
   player.adrenaline = Math.max(0, player.adrenaline - dt);
   player.invisible = Math.max(0, player.invisible - dt);
   player.invincible = Math.max(0, player.invincible - dt);
@@ -56,6 +62,7 @@ export function movePlayer(world: World, input: InputState, dt: number): void {
       Math.cos(player.facing) * step,
       Math.sin(player.facing) * step,
       PLAYER_RADIUS,
+      locked,
     );
     return;
   }
@@ -78,6 +85,7 @@ export function movePlayer(world: World, input: InputState, dt: number): void {
     input.moveX * scale,
     input.moveY * scale,
     PLAYER_RADIUS,
+    locked,
   );
   world.player.facing = Math.atan2(input.moveY, input.moveX);
 }

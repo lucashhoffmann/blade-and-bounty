@@ -14,10 +14,10 @@ type WeaponPickerProps = {
 
 // cor do cartao: as armas de alcance usam as mesmas da loja
 const OPTIONS: [id: WeaponId | null, color: string][] = [
-  [null, 'bg-rose-500'],
-  ['bow', 'bg-sky-500'],
-  ['metalBow', 'bg-violet-500'],
-  ['crossbow', 'bg-orange-500'],
+  [null, 'bg-red-800'],
+  ['bow', 'bg-amber-700'],
+  ['metalBow', 'bg-slate-500'],
+  ['crossbow', 'bg-orange-800'],
 ];
 
 // Cartoes no estilo da loja. So muda o preview: na run a arma vem da loja
@@ -32,7 +32,7 @@ export function WeaponPicker({
       aria-label={t.character.weaponPreview}
       className='font-display mt-5 flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border-4 border-white/80 bg-[var(--game-panel)] p-4 pt-0 text-center'
     >
-      <h2 className='-mt-5 rounded-full border-4 border-white bg-[var(--game-panelTitle)] px-5 py-1 tracking-wide text-white uppercase shadow-lg'>
+      <h2 className='-mt-5 rounded-full border-4 border-[var(--game-frame)] bg-[var(--game-panelTitle)] px-5 py-1 tracking-wide text-white uppercase shadow-lg'>
         {t.character.weaponPreview}
       </h2>
       <p className='font-sans text-xs font-bold tracking-wide text-white/80 uppercase'>
@@ -52,7 +52,7 @@ export function WeaponPicker({
             >
               <span
                 className={cn(
-                  'flex w-full flex-col items-center gap-1 rounded-2xl border-4 border-white p-2 text-white shadow-lg transition-transform group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-yellow-300',
+                  'flex w-full flex-col items-center gap-1 rounded-2xl border-4 border-[var(--game-frame)] p-2 text-white shadow-lg transition-transform group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-yellow-300',
                   color,
                   picked
                     ? '-translate-y-1 ring-4 ring-yellow-300'
@@ -75,7 +75,7 @@ export function WeaponPicker({
               <span
                 aria-hidden
                 className={cn(
-                  'flex h-8 w-14 items-center justify-center rounded-xl border-4 border-white shadow-md',
+                  'flex h-8 w-14 items-center justify-center rounded-xl border-4 border-[var(--game-frame)] shadow-md',
                   picked ? 'bg-green-500 text-white' : 'bg-slate-500',
                 )}
               >

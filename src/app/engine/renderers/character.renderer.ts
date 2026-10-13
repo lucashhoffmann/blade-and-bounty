@@ -217,6 +217,7 @@ export function createCharacterKit(look: PlayerLook): CharacterKit {
   const CLOTH = {
     player: mat.playerCloth,
     knight: mat.purple,
+    boss: mat.red,
     archer: mat.navy,
     brute: mat.dark,
   };
@@ -231,6 +232,8 @@ export function createCharacterKit(look: PlayerLook): CharacterKit {
     // player leva a espada na mao (grupo proprio, para o golpe)
     player: knight(mat.playerCloth, mat.playerAccent, mat.playerSkin),
     knight: enemyKnight,
+    // chefe: o cavaleiro em vermelho; o tamanho vem do modelo
+    boss: knight(mat.red, mat.gold, mat.skin),
     // archer: camisa e gravata na frente, cabelo; arco vai no braco
     archer: {
       body: [
@@ -258,6 +261,7 @@ export function createCharacterKit(look: PlayerLook): CharacterKit {
   const HOLD: Record<CharacterKind, number | null> = {
     player: 0.5,
     knight: 0.5,
+    boss: 0.5,
     archer: Math.PI / 2 - 0.1,
     brute: Math.PI / 2 - 0.1,
   };

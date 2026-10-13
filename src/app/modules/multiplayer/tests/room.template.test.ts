@@ -7,6 +7,7 @@ import {
 import { findPath } from '@/app/modules/level/utils/pathfinding.util';
 import { createMultiWorld } from '@/app/modules/multiplayer/systems/multiplayer.system';
 import {
+  MULTI_BOSS_TEMPLATE,
   MULTI_COMBAT_TEMPLATES,
   MULTI_SHOP_TEMPLATE,
   MULTI_START_TEMPLATE,
@@ -29,6 +30,7 @@ const SEATS = ['A', 'B', 'C', 'D'].map((name) => ({ name, color: '#fff' }));
 const ALL = [
   MULTI_START_TEMPLATE,
   MULTI_SHOP_TEMPLATE,
+  MULTI_BOSS_TEMPLATE,
   ...MULTI_COMBAT_TEMPLATES,
 ];
 
@@ -43,7 +45,7 @@ describe.each(ALL)('template $id', (template) => {
   it('tem 19 linhas de 17 tiles validos, com portas no centro', () => {
     expect(template.tiles).toHaveLength(H);
     for (const line of template.tiles) {
-      expect(line).toMatch(new RegExp(`^[#.$CoR]{${W}}$`));
+      expect(line).toMatch(new RegExp(`^[#.$CoRTSBP]{${W}}$`));
       expect(line[0]).toBe('#');
       expect(line[W - 1]).toBe('#');
     }

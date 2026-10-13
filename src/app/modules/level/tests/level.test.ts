@@ -1,18 +1,25 @@
 import { createEnemy } from '@/app/modules/enemy/systems/enemy.system';
 import {
+  bossMaxHp,
   goldenChestChance,
+  pickTemplate,
   spawnRoom,
   updateRooms,
 } from '@/app/modules/level/systems/level.system';
 import {
+  BOSS_TEMPLATE,
   COMBAT_TEMPLATES,
   SHOP_TEMPLATE,
   START_TEMPLATE,
 } from '@/app/modules/level/templates/room.template';
 import {
   breakProp,
+  arenaLocked,
+  bossOf,
   breakPropAt,
   doorOpen,
+  hasExitDoor,
+  isBossRoom,
   doorsSealed,
   hasLineOfSight,
   isDoorTile,
@@ -24,14 +31,18 @@ import { findPath } from '@/app/modules/level/utils/pathfinding.util';
 import {
   AMMO_LOOT_MAX,
   AMMO_LOOT_MIN,
+  BOSS_EVERY,
+  BOSS_HP_PER_FIGHT,
+  BUDDY_CHANCE,
+  BUDDY_GAP,
+  ENEMY_KINDS,
+  FIXED_DT,
   GOLDEN_CHEST_MAX,
   GOLDEN_CHEST_MIN,
   HEADSHOT_FROM_LEVEL,
   HEADSHOT_LOOT_MAX,
   HEADSHOT_LOOT_MIN,
   HEART_MAX,
-  BUDDY_CHANCE,
-  BUDDY_GAP,
   HEART_MIN,
   IDLE_WARNING_DELAY,
   INVINCIBILITY_MAX,
@@ -46,6 +57,7 @@ import {
   SHIELD_MIN,
   SHOP_EVERY,
 } from '@/app/modules/world/constants/world.constants';
+import { movePlayer } from '@/app/modules/player/systems/player.system';
 import {
   createEmptyWorld,
   createWorld,
@@ -57,7 +69,12 @@ import { createArenaWorld } from '@/test/world.fixture';
 const onPatrol = (world: World) =>
   world.enemies.filter((enemy) => enemy.patrol.length > 1);
 
-const ALL_TEMPLATES = [START_TEMPLATE, SHOP_TEMPLATE, ...COMBAT_TEMPLATES];
+const ALL_TEMPLATES = [
+  START_TEMPLATE,
+  SHOP_TEMPLATE,
+  BOSS_TEMPLATE,
+  ...COMBAT_TEMPLATES,
+];
 const DOOR = '####...####';
 
 describe.each(ALL_TEMPLATES)('template $id', (template) => {
@@ -67,7 +84,7 @@ describe.each(ALL_TEMPLATES)('template $id', (template) => {
   it('tem ROOM_H linhas de ROOM_W tiles validos', () => {
     expect(template.tiles).toHaveLength(ROOM_H);
     for (const line of template.tiles) {
-      expect(line).toMatch(new RegExp(`^[#.$Co]{${ROOM_W}}$`));
+      expect(line).toMatch(new RegExp(`^[#.$CoTSBP]{${ROOM_W}}$`));
     }
   });
 
@@ -265,6 +282,18 @@ describe('grid e caminho', () => {
     expect(breakPropAt(world, 2.5, 6.5)).toBe(true);
     expect(breakPropAt(world, 2.5, 6.5)).toBe(false);
     expect(findPath(world, from, to)).toHaveLength(8);
+  });
+
+  it('mobilia bloqueia caminho mas nao visao, e nao quebra; pilar bloqueia os dois', () => {
+    const world = createArenaWorld({ 6: '#TSBTSBTSB#' });
+    expect(hasLineOfSight(world, from, to)).toBe(true);
+    expect(findPath(world, from, to)).toEqual([]);
+    expect(breakPropAt(world, 2.5, 6.5)).toBe(false);
+    expect(findPath(world, from, to)).toEqual([]);
+
+    const pillars = createArenaWorld({ 6: '#PPPPPPPPP#' });
+    expect(hasLineOfSight(pillars, from, to)).toBe(false);
+    expect(findPath(pillars, from, to)).toEqual([]);
   });
 
   it('devolve vazio sem caminho', () => {
@@ -561,7 +590,7 @@ describe('bau dourado', () => {
 
 describe('brute da besta', () => {
   it('aparece menos que archer e knight, e nunca sozinho na ronda', () => {
-    const count = { archer: 0, knight: 0, brute: 0 };
+    const count = { archer: 0, knight: 0, brute: 0, boss: 0 };
     for (let seed = 1; seed <= 80; seed++) {
       for (const template of COMBAT_TEMPLATES) {
         const world = createEmptyWorld(seed);
@@ -601,5 +630,92 @@ describe('brute da besta', () => {
       if (gold) golden++;
     }
     expect(golden).toBeGreaterThan(0);
+  });
+});
+
+describe('chefe', () => {
+  // primeira arena: ultima sala antes do mercador da cacada BOSS_EVERY
+  const arena = BOSS_EVERY * SHOP_EVERY - 1;
+
+  it('a arena e a ultima sala antes do mercador, a cada BOSS_EVERY cacadas', () => {
+    const arenas = Array.from({ length: 60 }, (_, i) => i).filter(isBossRoom);
+    expect(arenas[0]).toBe(arena);
+    expect(arenas[1] - arenas[0]).toBe(BOSS_EVERY * SHOP_EVERY);
+    for (const index of arenas) expect((index + 1) % SHOP_EVERY).toBe(0);
+    expect(isBossRoom(0)).toBe(false);
+  });
+
+  it('a arena usa a sala propria e tem so o chefe dentro', () => {
+    const world = createEmptyWorld(3);
+    const template = pickTemplate(world, arena);
+    expect(template.kind).toBe('boss');
+    spawnRoom(world, arena, template);
+    expect(world.enemies.map((enemy) => enemy.kind)).toEqual(['boss']);
+    expect(world.props).toHaveLength(0);
+    expect(world.rooms[0].kind).toBe('boss');
+  });
+
+  it('a vida do chefe cresce a cada chefe ja enfrentado', () => {
+    expect(bossMaxHp(arena)).toBe(ENEMY_KINDS.boss.hp);
+    const next = arena + BOSS_EVERY * SHOP_EVERY;
+    expect(bossMaxHp(next)).toBe(
+      Math.round(ENEMY_KINDS.boss.hp * (1 + BOSS_HP_PER_FIGHT)),
+    );
+    const world = createEmptyWorld(3);
+    spawnRoom(world, next, BOSS_TEMPLATE);
+    expect(world.enemies[0].hp).toBe(bossMaxHp(next));
+  });
+
+  it('tem porta na entrada e na saida da arena, alem das de sempre', () => {
+    expect(hasExitDoor(arena - 1)).toBe(true);
+    expect(hasExitDoor(arena)).toBe(true);
+    expect(hasExitDoor(0)).toBe(true);
+    expect(hasExitDoor(1)).toBe(false);
+    // vao do meio da ultima linha da sala anterior: a entrada da arena
+    expect(isDoorTile(Math.floor(ROOM_W / 2), arena * ROOM_H - 1)).toBe(true);
+  });
+
+  it('quem entra fica trancado ate o chefe cair: portas fecham e viram parede', () => {
+    const world = createEmptyWorld(3);
+    spawnRoom(world, arena, BOSS_TEMPLATE);
+    const entrance = arena * ROOM_H - 1;
+    const exit = (arena + 1) * ROOM_H - 1;
+    // do lado de fora, colado na porta: ela abre
+    world.player.pos = { x: ROOM_W / 2, y: entrance - 0.5 };
+    expect(arenaLocked(world, arena)).toBe(false);
+    expect(doorOpen(world, entrance)).toBe(true);
+
+    // dentro: tranca as duas, mesmo com o player colado nelas
+    world.player.pos = { x: ROOM_W / 2, y: entrance + 1.5 };
+    expect(arenaLocked(world, arena)).toBe(true);
+    expect(doorOpen(world, entrance)).toBe(false);
+    world.player.pos = { x: ROOM_W / 2, y: exit - 0.6 };
+    expect(doorOpen(world, exit)).toBe(false);
+    // nao atravessa a saida
+    for (let i = 0; i < 120; i++) {
+      movePlayer(world, { moveX: 0, moveY: 1, dash: false }, FIXED_DT);
+    }
+    expect(world.player.pos.y).toBeLessThan(exit);
+
+    // chefe morto: destranca
+    bossOf(world, arena)!.state = 'dead';
+    expect(arenaLocked(world, arena)).toBe(false);
+    expect(doorOpen(world, exit)).toBe(true);
+    for (let i = 0; i < 120; i++) {
+      movePlayer(world, { moveX: 0, moveY: 1, dash: false }, FIXED_DT);
+    }
+    expect(world.player.pos.y).toBeGreaterThan(exit);
+  });
+
+  it('entrar na arena acorda o chefe em alerta', () => {
+    const world = createEmptyWorld(3);
+    spawnRoom(world, arena - 1, COMBAT_TEMPLATES[0]);
+    spawnRoom(world, arena, BOSS_TEMPLATE);
+    world.enemies = world.enemies.filter((enemy) => enemy.kind === 'boss');
+    world.run.roomIndex = arena - 1;
+    world.player.pos = { x: ROOM_W / 2, y: arena * ROOM_H + 0.6 };
+    updateRooms(world);
+    expect(bossOf(world, arena)!.detection).toBe(1);
+    expect(world.run.events.at(-1)?.text).toContain('chefe');
   });
 });

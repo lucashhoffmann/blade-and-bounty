@@ -29,6 +29,8 @@ import {
   ENEMY_DASH_PER_ROOM,
   ENEMY_KINDS,
   ENEMY_RADIUS,
+  BOSS_DAMAGE,
+  BOSS_REACH,
   BRUTE_FIRE_INTERVAL,
   BRUTE_FIRE_RANGE,
   BRUTE_PELLET_DAMAGE,
@@ -493,7 +495,11 @@ function alert(world: World, enemy: Enemy, dt: number): void {
   }
   const brute = enemy.kind === 'brute';
   const range = brute ? BRUTE_FIRE_RANGE : FIRE_RANGE;
-  const reach = stats.ranged ? range : KNIGHT_REACH;
+  const reach = stats.ranged
+    ? range
+    : enemy.kind === 'boss'
+      ? BOSS_REACH
+      : KNIGHT_REACH;
   const gap = distance(enemy.pos, player.pos);
   if (enemy.dash > 0) {
     // bote do knight acompanha o player que tenta sair da frente
@@ -634,7 +640,9 @@ function alert(world: World, enemy: Enemy, dt: number): void {
       ? BRUTE_PELLET_DAMAGE
       : stats.ranged
         ? ENEMY_ARROW_DAMAGE
-        : KNIGHT_DAMAGE,
+        : enemy.kind === 'boss'
+          ? BOSS_DAMAGE
+          : KNIGHT_DAMAGE,
   );
   if (stats.ranged) {
     // besta do brute: varias flechas em leque; archer: uma so, reta

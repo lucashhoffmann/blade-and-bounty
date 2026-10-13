@@ -19,7 +19,7 @@ type MatchMenuProps = {
 
 // botao brute de jogo, igual ao da home e da legenda
 const CHUNKY =
-  'font-display text-outline w-full cursor-pointer rounded-2xl border-4 border-white px-6 py-2 text-xl text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none';
+  'font-display text-outline w-full cursor-pointer rounded-2xl border-4 border-[var(--game-frame)] px-6 py-2 text-xl text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none';
 
 // Menu da partida em rede (P ou botao de pausa). Nao pausa: o jogo e de
 // todos e continua por baixo.
@@ -38,7 +38,7 @@ export function MatchMenu({
     >
       <DialogContent
         showCloseButton={false}
-        className='gap-4 rounded-3xl border-4 border-white bg-[var(--game-background)] shadow-[0_8px_0_var(--game-ink)] sm:max-w-sm'
+        className='gap-4 rounded-3xl border-4 border-[var(--game-frame)] bg-[var(--game-background)] shadow-[0_8px_0_var(--game-ink)] sm:max-w-sm'
       >
         <DialogHeader className='items-center text-center'>
           <DialogTitle className='font-display text-outline text-4xl leading-none tracking-wide text-white uppercase'>
@@ -59,7 +59,7 @@ export function MatchMenu({
           {host && (
             <button
               type='button'
-              className={`${CHUNKY} bg-[var(--game-brandPink)]`}
+              className={`${CHUNKY} bg-[var(--game-brand)]`}
               onClick={onEnd}
             >
               {t.match.end}

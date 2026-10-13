@@ -33,6 +33,10 @@ vi.mock('@/app/engine/scenery/scenery.config', () => ({
     goldenChest: { piece: 'chest_gold', scale: 0.5 },
     money: { piece: 'coins', scale: 0.5 },
     door: { piece: 'doorway', leaf: 'doorway_door', width: 2, height: 2.75 },
+    furniture: { T: { piece: 'table', scale: 0.5 } },
+    floorVariants: ['tile_broken'],
+    torch: { piece: 'torch', scale: 0.5 },
+    banners: ['banner_boss', 'banner'],
   },
 }));
 
@@ -58,6 +62,10 @@ function fakeKit() {
   piece(SCENERY.money.piece);
   piece(SCENERY.door.piece, SCENERY.door.leaf);
   for (const prop of SCENERY.props) piece(prop.piece);
+  for (const item of Object.values(SCENERY.furniture ?? {})) piece(item.piece);
+  for (const name of SCENERY.floorVariants ?? []) piece(name);
+  for (const name of SCENERY.banners ?? []) piece(name);
+  if (SCENERY.torch) piece(SCENERY.torch.piece);
   return createModelKit(root);
 }
 
@@ -88,8 +96,16 @@ describe('cenario do kit', () => {
     renderer.sync(world, 1.1);
     const floor = named<THREE.InstancedMesh>(scene, 'floor');
     expect(floor).toBeInstanceOf(THREE.InstancedMesh);
-    // um ladrilho por tile, e so um piso em cena
-    expect(floor.count).toBe(ROOM_W * ROOM_H);
+    // um ladrilho por tile, somando os comuns e as variacoes
+    const odd = scene.getObjectsByProperty(
+      'name',
+      'floorVariant',
+    ) as THREE.InstancedMesh[];
+    const laid = odd.reduce((sum, mesh) => sum + mesh.count, floor.count);
+    expect(laid).toBe(ROOM_W * ROOM_H);
+    // a maioria e o ladrilho comum, mas ha variacao
+    expect(floor.count).toBeGreaterThan(ROOM_W * ROOM_H * 0.7);
+    expect(floor.count).toBeLessThan(ROOM_W * ROOM_H);
     expect(scene.getObjectsByProperty('name', 'floor')).toHaveLength(1);
     renderer.dispose();
   });
@@ -152,6 +168,28 @@ describe('cenario do kit', () => {
     renderer.dispose();
   });
 
+  it('mobilia e pilar: um por tile, do kit com o pe no chao, ou caixa sem peca', async () => {
+    // mesa tem peca no kit de mentira; pilar nao, e sai a caixa
+    const { world, scene, renderer } = setup({ 9: '#..T...P..#' });
+    renderer.sync(world, 1);
+    await arrive();
+    renderer.sync(world, 1.1);
+    const items = scene.getObjectsByProperty('name', 'furniture');
+    expect(items).toHaveLength(2);
+    const [table, pillar] = items;
+    expect(table.getObjectByName('table')).toBeDefined();
+    // linha 9 do template = y de 3 a 4
+    expect(table.position.x).toBeCloseTo(3.5);
+    expect(table.position.z).toBeCloseTo(-3.5);
+    scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(table);
+    expect(box.min.y).toBeCloseTo(0);
+    expect(box.max.x - box.min.x).toBeLessThan(1);
+    expect(pillar.position.x).toBeCloseTo(7.5);
+    expect(pillar.children[0]).toBeInstanceOf(THREE.Mesh);
+    renderer.dispose();
+  });
+
   it('caixa inteira vem do kit; quebrada, vira destrocos; dourada, o bau dourado', async () => {
     const { world, scene, renderer } = setup({ 9: '#....o....#' });
     renderer.sync(world, 1);
@@ -206,6 +244,41 @@ describe('cenario do kit', () => {
     expect(scene.getObjectsByProperty('name', SCENERY.door.leaf)).toHaveLength(
       2,
     );
+    renderer.dispose();
+  });
+
+  it('tochas nas paredes viradas para a sala, cada uma com a luz no chao; sempre nos mesmos lugares', async () => {
+    const count = async () => {
+      const { world, scene, renderer } = setup();
+      renderer.sync(world, 1);
+      await arrive();
+      renderer.sync(world, 1.1);
+      const torches = named<THREE.InstancedMesh>(scene, 'torches').count;
+      expect(named<THREE.InstancedMesh>(scene, 'torchPools').count).toBe(
+        torches,
+      );
+      renderer.dispose();
+      return torches;
+    };
+    const first = await count();
+    expect(first).toBeGreaterThan(0);
+    // so a parede do fundo da arena de teste tem face para a sala
+    expect(first).toBeLessThanOrEqual(ROOM_W - 2);
+    expect(await count()).toBe(first);
+  });
+
+  it('estandartes so na parede do fundo, na cor do nivel (a do chefe fica para a arena)', async () => {
+    const { world, scene, renderer } = setup();
+    renderer.sync(world, 1);
+    await arrive();
+    renderer.sync(world, 1.1);
+    const banners = scene.getObjectsByProperty('name', 'wallBanner');
+    expect(banners.length).toBeGreaterThan(0);
+    for (const banner of banners) {
+      // colado na face da parede do fundo (y da sala de 12 a 13)
+      expect(-banner.position.z).toBeGreaterThan(ROOM_H - 2);
+      expect(banner.getObjectByName('banner_boss')).toBeUndefined();
+    }
     renderer.dispose();
   });
 

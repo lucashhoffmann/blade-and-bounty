@@ -20,16 +20,30 @@ const CAMERA_HEIGHT = 13;
 const CAMERA_BACK = 7;
 const MAX_FRAME_TIME = 0.1;
 const CAMERA_FOV = 45;
-// soco de camera ao matar e ao levar dano: zoom curto com blur que se desfaz
+// soco de camera ao matar, ao levar dano e ao acertar: zoom curto com blur
+// que se desfaz
 // por quanto tempo (ms) o clique que vem de um toque em icone e ignorado
 const PROMPT_CLICK_GUARD = 600;
-const PUNCH_TIME = 0.35;
-const PUNCH_ZOOM = 3.5;
-const PUNCH_BLUR = 3;
+const PUNCH_TIME = 0.42;
+const PUNCH_ZOOM = 5.5;
+const PUNCH_BLUR = 4;
+// golpe do player que acerta: soco menor; critico, overkill e na mosca valem
+// o soco inteiro
+const HIT_PUNCH = 0.45;
+// dano levado: a camera treme por HURT_TIME, ate HURT_SHAKE de lado
+const HURT_TIME = 0.3;
+const HURT_SHAKE = 0.16;
+// Perseguicao (algum inimigo em alerta): a camera fecha um pouco e bate como
+// coracao, CHASE_BEATS vezes por segundo. Entra e sai em CHASE_EASE segundos.
+const CHASE_ZOOM = 2.4;
+const CHASE_BEAT_ZOOM = 1.3;
+const CHASE_BEAT_BLUR = 0.9;
+const CHASE_BEATS = 2.2;
+const CHASE_EASE = 0.5;
 // F no corpo a corpo (`player.clash`): zoom e blur menores que os do soco,
 // que duram enquanto o jogador segue apertando
-const CLASH_ZOOM = 2;
-const CLASH_BLUR = 1.2;
+const CLASH_ZOOM = 3;
+const CLASH_BLUR = 1.7;
 // raio, em px na tela, em que o toque conta como em cima do icone de
 // interacao; folgado, para caber um dedo
 const PROMPT_TAP_RADIUS = 44;
@@ -50,7 +64,7 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(COLORS.model.c1f2033);
+  scene.background = new THREE.Color(COLORS.ui.background);
   scene.add(
     new THREE.HemisphereLight(COLORS.model.cffffff, COLORS.model.c444466, 1.8),
   );
@@ -167,6 +181,9 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
   let kills = 0;
   let hp = 0;
   let punch = 0;
+  let dealt = 0;
+  let hurt = 0;
+  let chase = 0;
   const focus = { x: 0, y: 0 };
 
   const frame = (now: number) => {
@@ -209,17 +226,51 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
     // escudo absorvendo tambem conta como dano levado
     const health = world.player.hp + world.player.shield;
     if (world.run.kills > kills || health < hp) punch = 1;
+    if (health < hp) hurt = 1;
+    // golpe que entrou: soco pequeno; com destaque (critico, overkill, na
+    // mosca), o inteiro
+    if (world.run.stats.damageDealt > dealt) {
+      const big = world.floaters.some(
+        (floater) =>
+          !floater.onPlayer &&
+          floater.age < 0.1 &&
+          (floater.critical || floater.overkill || floater.headshot),
+      );
+      punch = Math.max(punch, big ? 1 : HIT_PUNCH);
+    }
     kills = world.run.kills;
     hp = health;
+    dealt = world.run.stats.damageDealt;
     punch = Math.max(0, punch - frameTime / PUNCH_TIME);
+    hurt = Math.max(0, hurt - frameTime / HURT_TIME);
+    // perseguicao: entra e sai aos poucos; o batimento e um pulso curto
+    const hunted =
+      world.status === 'playing' &&
+      world.player.hp > 0 &&
+      world.enemies.some((enemy) => enemy.state === 'alert');
+    chase +=
+      Math.sign((hunted ? 1 : 0) - chase) *
+      Math.min(Math.abs((hunted ? 1 : 0) - chase), frameTime / CHASE_EASE);
+    const beat =
+      chase * Math.max(0, Math.sin((now / 1000) * Math.PI * CHASE_BEATS)) ** 6;
     const { dash } = world.player;
     const clash = world.player.clash / CRIT_FOCUS_TIME;
-    camera.fov = CAMERA_FOV - PUNCH_ZOOM * punch - CLASH_ZOOM * clash;
+    camera.fov =
+      CAMERA_FOV -
+      PUNCH_ZOOM * punch -
+      CLASH_ZOOM * clash -
+      CHASE_ZOOM * chase -
+      CHASE_BEAT_ZOOM * beat;
     camera.updateProjectionMatrix();
     const rush =
       dash > 0 ? Math.sin(Math.PI * (1 - dash / DASH_TIME)) * DASH_BLUR : 0;
     // o mais forte vale; nao somam
-    const blur = Math.max(punch * PUNCH_BLUR, rush, clash * CLASH_BLUR);
+    const blur = Math.max(
+      punch * PUNCH_BLUR,
+      rush,
+      clash * CLASH_BLUR,
+      beat * CHASE_BEAT_BLUR,
+    );
     canvas.style.filter = blur > 0.05 ? `blur(${blur.toFixed(1)}px)` : '';
 
     // camera segue suavizada, como o personagem (ver world.renderer animate)
@@ -233,8 +284,15 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
     const follow = far ? 1 : Math.min(1, frameTime * CAMERA_FOLLOW_RATE);
     focus.x += (x - focus.x) * follow;
     focus.y += (y - focus.y) * follow;
-    camera.position.set(focus.x, CAMERA_HEIGHT, -focus.y + CAMERA_BACK);
-    camera.lookAt(focus.x, 0, -focus.y);
+    // tremor do dano: desloca camera e alvo juntos, para nao girar a vista
+    const shakeX = (Math.random() - 0.5) * 2 * HURT_SHAKE * hurt;
+    const shakeZ = (Math.random() - 0.5) * 2 * HURT_SHAKE * hurt;
+    camera.position.set(
+      focus.x + shakeX,
+      CAMERA_HEIGHT,
+      -focus.y + CAMERA_BACK + shakeZ,
+    );
+    camera.lookAt(focus.x + shakeX, 0, -focus.y + shakeZ);
     renderer.render(scene, camera);
   };
   frameId = requestAnimationFrame(frame);

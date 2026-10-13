@@ -23,7 +23,8 @@ export type InputState = {
   select?: WeaponId | 'sword' | 'next';
 };
 
-export type RoomKind = 'start' | 'combat' | 'shop';
+// 'boss': arena do chefe, so ele dentro (level.system)
+export type RoomKind = 'start' | 'combat' | 'shop' | 'boss';
 
 export type RoomTemplate = {
   id: string;
@@ -48,7 +49,8 @@ export type Room = {
 };
 
 // 'brute': brute de besta, raro, sempre em dupla; tambem guarda bau
-export type EnemyKind = 'knight' | 'archer' | 'brute';
+// 'boss': o chefe, um por arena, a cada BOSS_EVERY cacadas
+export type EnemyKind = 'knight' | 'archer' | 'brute' | 'boss';
 
 export type EnemyStats = {
   hp: number;

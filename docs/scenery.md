@@ -42,15 +42,18 @@ type ModelKit = {
 
 `SCENERY`, em `scenery.config.ts`:
 
-| No jogo                     | Peca do kit                                          | Como                                                  |
-| --------------------------- | ---------------------------------------------------- | ----------------------------------------------------- |
-| piso                        | `floor_tile_small`                                   | um por tile (parede inclusive), em lote               |
-| parede (tile `#`)           | `wall_half`                                          | um bloco por tile, em lote                            |
-| objeto quebravel (tile `o`) | `box_large`, `crates_stacked`, `barrel_large`, `keg` | sorteado pelo `id`, virado para um dos 4 lados        |
-| bau dourado                 | `chest_gold`                                         | no lugar do objeto, com a aura                        |
-| bau da loja e de revive     | `chest`, com a tampa `chest_lid`                     | a tampa gira na dobradica para abrir                  |
-| dinheiro no chao            | `coin_stack_small`                                   | com a aura                                            |
-| porta de correr             | a folha de madeira de `wall_doorway`                 | duas folhas no vao, sem moldura; correm para os lados |
+| No jogo                     | Peca do kit                                               | Como                                                                                  |
+| --------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| piso                        | `floor_tile_small`                                        | um por tile (parede inclusive), em lote                                               |
+| parede (tile `#`)           | `wall_half`                                               | um bloco por tile, em lote                                                            |
+| objeto quebravel (tile `o`) | `box_large`, `crates_stacked`, `barrel_large`, `keg`      | sorteado pelo `id`, virado para um dos 4 lados                                        |
+| bau dourado                 | `chest_gold`                                              | no lugar do objeto, com a aura                                                        |
+| bau da loja e de revive     | `chest`, com a tampa `chest_lid`                          | a tampa gira na dobradica para abrir                                                  |
+| dinheiro no chao            | `coin_stack_small`                                        | com a aura                                                                            |
+| porta de correr             | a folha de madeira de `wall_doorway`                      | duas folhas no vao, sem moldura; correm para os lados                                 |
+| chao variado                | `floor_tile_small_broken_A/B`, `floor_tile_small_weeds_A` | cerca de 12% dos ladrilhos de chao, sempre nos mesmos lugares                         |
+| tochas                      | `torch_mounted`                                           | nas faces de parede viradas para a camera, uma a cada 3 (na arena do chefe, a cada 2) |
+| estandartes                 | `banner_red`, `banner_blue`, `banner_green`               | na parede do fundo; vermelho na arena do chefe, as outras cores revezam por nivel     |
 
 Continua de antes, sem peca do kit: destrocos da caixa quebrada, coracao,
 escudo e os outros itens.
@@ -75,9 +78,28 @@ Cada contrato tinha a sua cor de parede. Com o kit, o material e clonado por
 nivel e tingido no mesmo tom (`sceneryTint`). O efeito e discreto: o topo
 escuro das paredes domina a vista de cima.
 
+### Decoracao
+
+Tocha, estandarte e ladrilho variado sao **so desenho** (`decorate`, em
+`world.renderer.ts`): nao existem na simulacao, nao bloqueiam passagem,
+flecha nem visao. Os lugares saem de `spotHash(sala, coluna, linha)`: a mesma
+sala tem sempre a mesma decoracao, sem gastar o sorteio do jogo.
+
+- **onde cabe**: so em face de parede que da para o chao da sala e fica
+  virada para a camera (o tile de parede com chao logo "abaixo" no template).
+  E a unica face que a vista de cima mostra
+- **tocha**: o modelo do kit, mais uma chama e um clarao em volta, e uma poca
+  de luz no chao a frente dela. A poca e o que mais aparece de cima: disco
+  que clareia no meio e some na borda, somado ao piso. Clarao e poca tremulam
+  juntos (opacidade dos materiais `torchGlow` e `torchPool`, no `sync`)
+- **nao ha luz de verdade**: nenhuma `PointLight`. A tocha nao ilumina
+  personagem nem parede; custa quatro lotes por sala, nao uma luz por tocha
+- **ajuste**: `FLOOR_VARIANT_SHARE`, `TORCH_EVERY`, `BANNER_EVERY` no topo de
+  `world.renderer.ts`; pecas e tamanho em `SCENERY`
+
 ## Arquivo e peso
 
-`public/models/kaykit/dungeon.glb`: 395 KB, 10 pecas, uma textura e um
+`public/models/kaykit/dungeon.glb`: 469 KB, 17 pecas, uma textura e um
 material. Baixa uma vez ao abrir a partida; o service worker guarda.
 
 No pacote original cada peca e um `.gltf` com o proprio `.bin`, e todas
@@ -120,9 +142,9 @@ muda.
 
 ## O que falta
 
-- **decoracao**: tocha, estandarte, mesa, pilar e o resto do pacote nao
-  entram. Pedem lugar no template da sala (ou sorteio) para nao ficar no
-  caminho
+- **mais decoracao**: mesa, estante, barril de enfeite, pilar e o resto do
+  pacote nao entram. Sao objetos de chao: pedem lugar no template da sala
+  (ou virar obstaculo de verdade) para nao parecer que da para atravessar
 - **parede e um bloco por tile**: quina e ponta de parede usam o mesmo bloco,
   sem peca propria de canto
 - **destrocos**: caixa quebrada vira as tabuas antigas, na cor da variacao

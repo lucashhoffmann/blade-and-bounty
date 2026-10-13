@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { vi } from 'vitest';
 
 import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
-import { PLAYER_MODEL } from '@/app/engine/characters/character-models.config';
 import type { CharacterView } from '@/app/engine/characters/character-view.types';
 import { createWorldRenderer } from '@/app/engine/renderers/world.renderer';
 import {
@@ -29,11 +28,16 @@ vi.mock('@/app/engine/characters/character-models.config', () => {
     rig: { scale: 0.5, turn: 0, slots: {}, clips: {} },
   });
   return {
-    PLAYER_MODEL: model('hero'),
+    PLAYER_OUTFITS: {
+      rogueHooded: model('hero'),
+      rogue: model('hero'),
+      mage: model('hero'),
+    },
     ENEMY_MODELS: {
-      knight: model('knight'),
-      archer: model('archer'),
-      brute: model('brute'),
+      knight: [model('knight')],
+      archer: [model('archer')],
+      brute: [model('brute')],
+      boss: [model('boss')],
     },
   };
 });
@@ -67,7 +71,7 @@ function setup(kind: EnemyKind = 'knight') {
   const hero = fakeBody('heroBody');
   vi.mocked(loadCharacterView)
     .mockReset()
-    .mockImplementation(async (model) => (model === PLAYER_MODEL ? hero : foe));
+    .mockImplementation(async (model) => (model.url === 'hero' ? hero : foe));
   const world = createArenaWorld();
   const enemy = addEnemy(world, 5.5, 8.5, Math.PI / 2, kind);
   const scene = new THREE.Scene();
@@ -87,11 +91,17 @@ const parts = (body: ReturnType<typeof fakeBody>) =>
   )!;
 
 describe('inimigo com corpo de modelo', () => {
-  it('o corpo de pecas aparece ate o modelo chegar e some depois', async () => {
+  it('enquanto o modelo nao chega nada do corpo aparece; depois, so o modelo', async () => {
     const { foe, world, scene, renderer } = setup();
     renderer.sync(world, 1);
     expect(scene.getObjectByName('foeBody')).toBeUndefined();
     expect(foe.pose).not.toHaveBeenCalled();
+    // o de pecas ja esta em cena (segura posicao e marcadores), escondido
+    const marker = scene.getObjectByName('rageMarker')!;
+    const hidden = marker.parent!.parent!.children.filter(
+      (child) => child.children.length > 3 && !child.visible,
+    );
+    expect(hidden).toHaveLength(1);
 
     await arrive();
     renderer.sync(world, 1.1);
@@ -184,7 +194,7 @@ describe('inimigo com corpo de modelo', () => {
     seen.renderer.dispose();
   });
 
-  it('arquivo que nao chega nao quebra o jogo: fica o corpo de pecas', async () => {
+  it('arquivo que nao chega nao quebra o jogo: aparece o corpo de pecas', async () => {
     const { world, scene, renderer } = setup();
     vi.mocked(loadCharacterView)
       .mockReset()
@@ -195,6 +205,11 @@ describe('inimigo com corpo de modelo', () => {
     expect(() => again.sync(world, 1.1)).not.toThrow();
     expect(scene.getObjectByName('foeBody')).toBeUndefined();
     expect(scene.getObjectByName('heroBody')).toBeUndefined();
+    // os corpos de pecas dos dois renderers: o que falhou mostra o seu
+    const shown = scene.children
+      .flatMap((root) => root.children)
+      .filter((child) => child.children.length > 3 && child.visible);
+    expect(shown.length).toBeGreaterThan(0);
     renderer.dispose();
     again.dispose();
   });

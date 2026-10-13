@@ -40,7 +40,7 @@ export function ReviveDialog({
     >
       <DialogContent
         showCloseButton={false}
-        className='gap-4 rounded-3xl border-4 border-white bg-[#1f2033] shadow-[0_8px_0_#14141f] sm:max-w-sm'
+        className='gap-4 rounded-3xl border-4 border-[var(--game-frame)] bg-[var(--game-background)] shadow-[0_8px_0_#14141f] sm:max-w-sm'
       >
         <DialogHeader className='items-center text-center'>
           <DialogTitle className='font-display text-outline flex items-center gap-2 text-3xl leading-none tracking-wide text-white uppercase'>
@@ -59,13 +59,13 @@ export function ReviveDialog({
             <li key={score.id}>
               <button
                 type='button'
-                className='font-display text-outline flex w-full cursor-pointer items-center gap-3 rounded-2xl border-4 border-white bg-[#16345c] px-4 py-2 text-left text-xl shadow-[0_5px_0_#14141f] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none'
+                className='font-display text-outline flex w-full cursor-pointer items-center gap-3 rounded-2xl border-4 border-[var(--game-frame)] bg-[#16345c] px-4 py-2 text-left text-xl shadow-[0_5px_0_#14141f] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none'
                 style={{ color: score.color ?? '#ffffff' }}
                 onClick={() => onRevive(score.id)}
               >
                 <span
                   aria-hidden
-                  className='size-4 shrink-0 rounded-full border-2 border-white'
+                  className='size-4 shrink-0 rounded-full border-2 border-[var(--game-frame)]'
                   style={{ background: score.color ?? '#ffffff' }}
                 />
                 {score.name}
@@ -76,7 +76,7 @@ export function ReviveDialog({
         <DialogFooter>
           <button
             type='button'
-            className='font-display text-outline w-full cursor-pointer rounded-2xl border-4 border-white bg-[#3d4fd6] px-6 py-2 text-lg text-white uppercase shadow-[0_5px_0_#14141f] transition-transform active:translate-y-1 active:shadow-none'
+            className='font-display text-outline w-full cursor-pointer rounded-2xl border-4 border-[var(--game-frame)] bg-[#3d4fd6] px-6 py-2 text-lg text-white uppercase shadow-[0_5px_0_#14141f] transition-transform active:translate-y-1 active:shadow-none'
             onClick={onClose}
           >
             {t.common.close}

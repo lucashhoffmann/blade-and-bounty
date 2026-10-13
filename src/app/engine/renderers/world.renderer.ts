@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
 import {
   ENEMY_MODELS,
-  PLAYER_MODEL,
+  PLAYER_OUTFITS,
 } from '@/app/engine/characters/character-models.config';
 import type { CharacterView } from '@/app/engine/characters/character-view.types';
 import { loadModelKit, type ModelKit } from '@/app/engine/scenery/model-kit';
@@ -24,6 +24,8 @@ import {
 import {
   castRay,
   doorOpen,
+  hasExitDoor,
+  isFurniture,
   isSolidTile,
   nearbyProp,
   tileAt,
@@ -79,6 +81,21 @@ const ARROW_Y = 0.7;
 
 const MOVING_SPEED = 0.5;
 const RUN_LEAN = 0.38;
+// Decoracao do cenario de kit. De cada 100 ladrilhos de chao, quantos sao
+// variacao; uma tocha a cada tantas faces de parede (na arena do chefe, a
+// cada 2); um estandarte a cada tantas faces da parede do fundo.
+const FLOOR_VARIANT_SHARE = 12;
+const TORCH_EVERY = 3;
+const BANNER_EVERY = 3;
+const TORCH_Y = 0.7;
+// logo acima do chao e do cone de visao, para nao disputar o plano com eles
+const TORCH_POOL_Y = 0.04;
+// sorteio fixo por lugar: a mesma sala tem sempre a mesma decoracao
+const spotHash = (room: number, col: number, row: number) =>
+  Math.abs((room * 131 + col * 37 + row * 71) % 1000);
+// "nivel" de tom da arena do chefe em `sceneryTint`: nenhum nivel de
+// verdade chega nele
+const BOSS_TONE = -1;
 // velocidade (tiles/s) em que o corpo de modelo ja esta em corrida cheia
 const MODEL_RUN_SPEED = 3;
 // brilho do corpo de modelo em furia (o de pecas troca o contorno)
@@ -125,7 +142,7 @@ const CARDINALS = [
 // voltas da dagger no ar (rad/s)
 const DAGGER_SPIN = 28;
 // nome do jogador sobre a cabeca (multiplayer). Fonte do index.html
-const NAME_TAG_FONT = "64px 'Pirata One', 'Palatino Linotype', Georgia, serif";
+const NAME_TAG_FONT = "900 64px 'Alegreya Sans', system-ui, sans-serif";
 const NAME_TAG_CANVAS = [512, 96];
 const NAME_TAG_SIZE = [2.4, 0.45];
 const NAME_TAG_Y = 2.05;
@@ -133,8 +150,10 @@ const NAME_TAG_Y = 2.05;
 const TALK_RANGE = 1.8;
 // segundos de cada fala
 const TALK_TURN = 1.6;
+// perseguicao: de quanto em quanto tempo (s) um inimigo em alerta pode gritar
+const CHASE_TALK_TURN = 1.3;
 const TALK_LINES = ['...', '?', 'zzz', '$$$', 'hm', '!', 'ha ha', 'psiu'];
-const BUBBLE_FONT = "64px 'Pirata One', 'Palatino Linotype', Georgia, serif";
+const BUBBLE_FONT = "900 64px 'Alegreya Sans', system-ui, sans-serif";
 const BUBBLE_CANVAS = [256, 176];
 const BUBBLE_SIZE = [1.05, 0.72];
 const BUBBLE_Y = 2.25;
@@ -155,7 +174,7 @@ const RECOIL_PUSH = 0.05;
 // o clarao dura so o comeco do recuo
 const FLASH_TIME = 0.07;
 // numero de dano flutuante. A fonte vem do index.html (Google Fonts)
-const FLOATER_FONT = '76px MedievalSharp';
+const FLOATER_FONT = "900 76px 'Alegreya Sans'";
 const FLOATER_CANVAS = [320, 120];
 // tamanho do texto no mundo, na mesma proporcao do canvas
 const FLOATER_SIZE = [2, 0.75];
@@ -200,17 +219,17 @@ const DOOR_LEAF_HEIGHT = 1.16;
 // giro da tampa do bau aberta, em torno da dobradica
 const CHEST_OPEN = -1.9;
 const BLOOD_GROW_TIME = 2.5;
-// explosao ao matar: notas de dinheiro e gotas de sangue saltam do inimigo,
+// explosao ao matar: moedas de ouro e gotas de sangue saltam do inimigo,
 // caem com gravidade e somem encolhendo. So visual
 const BURST = {
-  bills: 22,
+  coins: 22,
   drops: 16,
   // velocidade para os lados e para cima, em unidades por segundo
   spread: 3.2,
   lift: 4.6,
   gravity: 13,
   // segundos no ar e no chao antes de sumir; o fim e o encolher
-  billLife: 1.7,
+  coinLife: 1.7,
   dropLife: 1.1,
   fade: 0.35,
 };
@@ -294,7 +313,7 @@ type EnemyView = Jumper & {
   cone: THREE.Mesh;
   blood: THREE.Mesh;
   deathAt: number | null;
-  // ja soltou a explosao de notas e sangue da morte
+  // ja soltou a explosao de moedas e sangue da morte
   burst: boolean;
   // corpo de modelo (ENEMY_MODELS), no lugar do de pecas; null enquanto o
   // arquivo nao chega, e para sempre em quem nao tem modelo
@@ -675,6 +694,19 @@ export function bloodPoolGeometry(seed: number): THREE.BufferGeometry {
     .rotateZ(roll(0) * Math.PI * 2);
 }
 
+// Luz da tocha no chao: disco deitado que clareia no meio e some na borda.
+// A cor do vertice vai de branco (centro) a preto (borda); como o material
+// soma com o piso, preto nao acrescenta nada.
+function torchPoolGeometry(): THREE.BufferGeometry {
+  const disc = new THREE.CircleGeometry(1.4, 28).rotateX(-Math.PI / 2);
+  const count = disc.getAttribute('position').count;
+  const colors = new Float32Array(count * 3);
+  // o primeiro vertice e o centro
+  colors.fill(1, 0, 3);
+  disc.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return disc;
+}
+
 function lambert(color: number): THREE.Material {
   return new THREE.MeshLambertMaterial({ color });
 }
@@ -714,6 +746,10 @@ export function createWorldRenderer(
   const geo = {
     wall: new THREE.BoxGeometry(1, WALL_HEIGHT, 1),
     floor: new THREE.PlaneGeometry(ROOM_W, ROOM_H),
+    // chama da tocha de parede
+    torchFlame: new THREE.ConeGeometry(0.07, 0.22, 6),
+    // luz da tocha no chao: disco deitado
+    torchPool: torchPoolGeometry(),
     // moeda octogonal, base no y=0
     coin: new THREE.CylinderGeometry(0.1, 0.1, 0.032, 8).translate(0, 0.016, 0),
     aura: new THREE.SphereGeometry(0.45, 12, 8),
@@ -773,9 +809,6 @@ export function createWorldRenderer(
     flashCore: new THREE.SphereGeometry(0.3, 8, 6),
     crate: new THREE.BoxGeometry(0.78, 0.62, 0.78),
     plank: new THREE.BoxGeometry(0.34, 0.06, 0.2),
-    // nota de dinheiro e a faixa clara do meio
-    bill: new THREE.BoxGeometry(0.36, 0.02, 0.18),
-    billBand: new THREE.BoxGeometry(0.13, 0.025, 0.185),
     // cilindro de raio 1 e altura 1, escalado por quem usa (barril, vaso)
     drum: new THREE.CylinderGeometry(1, 1, 1, 10),
     // folha: lamina pontuda saindo da origem para cima
@@ -848,8 +881,6 @@ export function createWorldRenderer(
     }),
     wood: lambert(COLORS.model.ca8703c),
     woodDark: lambert(COLORS.model.c6e4726),
-    bill: flat(COLORS.model.c35d267),
-    billBand: flat(COLORS.model.cb8f5c6),
     cabinet: lambert(COLORS.model.ce8734f),
     cabinetDark: lambert(COLORS.model.ca94f33),
     barrel: lambert(COLORS.model.c8b2f3a),
@@ -880,6 +911,24 @@ export function createWorldRenderer(
     dagger: new THREE.MeshLambertMaterial({
       color: COLORS.model.cc8ccd8,
       flatShading: true,
+    }),
+    torchFlame: new THREE.MeshBasicMaterial({ color: 0xffa733 }),
+    // luz no chao: bem fraca, soma com o piso; tremula junto com o clarao
+    torchPool: new THREE.MeshBasicMaterial({
+      color: 0xffa040,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.3,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+    // clarao em volta da chama; a intensidade tremula no `sync`
+    torchGlow: new THREE.MeshBasicMaterial({
+      color: 0xffb347,
+      transparent: true,
+      opacity: 0.4,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     }),
     wind: new THREE.MeshBasicMaterial({
       color: COLORS.model.cd6f4ff,
@@ -1005,7 +1054,8 @@ export function createWorldRenderer(
     let tinted = sceneryTints.get(level);
     if (!tinted) {
       const material = base.clone() as THREE.MeshLambertMaterial;
-      material.color.setHSL((HUE_START + level * HUE_STEP) % 1, 0.45, 0.8);
+      if (level === BOSS_TONE) material.color.setHSL(0, 0.75, 0.55);
+      else material.color.setHSL((HUE_START + level * HUE_STEP) % 1, 0.45, 0.8);
       tinted = material;
       sceneryTints.set(level, tinted);
     }
@@ -1052,13 +1102,9 @@ export function createWorldRenderer(
         life: life * (0.75 + Math.random() * 0.25),
       });
     };
-    for (let i = 0; i < BURST.bills; i++) {
-      const bill = new THREE.Group();
-      bill.add(
-        new THREE.Mesh(geo.bill, mat.bill),
-        new THREE.Mesh(geo.billBand, mat.billBand),
-      );
-      launch(bill, BURST.billLife, 1);
+    // moedas de ouro: as mesmas do dinheiro no chao, girando no ar
+    for (let i = 0; i < BURST.coins; i++) {
+      launch(new THREE.Mesh(geo.coin, mat.coin), BURST.coinLife, 1);
     }
     for (let i = 0; i < BURST.drops; i++) {
       const drop = new THREE.Mesh(geo.box, mat.blood);
@@ -1139,10 +1185,10 @@ export function createWorldRenderer(
     const [x, y] = [canvas.width / 2, canvas.height / 2 + 4];
     if (banner) {
       // duas linhas: o destaque em cima e o numero menor embaixo
-      context.font = FLOATER_FONT.replace(/^\d+/, '50');
+      context.font = FLOATER_FONT.replace(/\d+px/, '50px');
       context.strokeText(text, x, y + 30);
       context.fillText(text, x, y + 30);
-      context.font = FLOATER_FONT.replace(/^\d+/, '46');
+      context.font = FLOATER_FONT.replace(/\d+px/, '46px');
       context.fillStyle = FLOATER_BANNER[banner];
       const title = {
         HEADSHOT: getTexts().game.headshot,
@@ -1323,35 +1369,55 @@ export function createWorldRenderer(
       papers = wallpaper(level);
       wallpapers.set(level, papers);
     }
+    // arena do chefe: pedra em vermelho-sangue, fora do tom do nivel
+    const tone = room.kind === 'boss' ? BOSS_TONE : level;
     const tile = scenery?.mesh(SCENERY.floor.piece);
     const brick = scenery?.mesh(SCENERY.wall.piece);
     const matrix = new THREE.Matrix4();
-    if (tile) {
-      // piso do kit: um ladrilho por tile, com o topo no nivel do chao
-      const tiles = new THREE.InstancedMesh(
-        tile.geometry,
-        sceneryTint(level, tile.material),
-        ROOM_W * ROOM_H,
-      );
-      tiles.name = 'floor';
+    if (tile && scenery) {
+      // piso do kit: um ladrilho por tile, com o topo no nivel do chao. Uns
+      // poucos saem quebrados ou com mato (`floorVariants`), sempre nos
+      // mesmos lugares da mesma sala
       const size = SCENERY.floor.scale;
       tile.geometry.computeBoundingBox();
       const top = (tile.geometry.boundingBox?.max.y ?? 0) * size;
       const scale = new THREE.Vector3(size, size, size);
       const still = new THREE.Quaternion();
-      let i = 0;
+      const variants = (SCENERY.floorVariants ?? []).flatMap((piece) => {
+        const mesh = scenery?.mesh(piece);
+        return mesh ? [mesh] : [];
+      });
+      // [0] e o ladrilho comum; os outros, as variacoes
+      const spots: Vec2[][] = [[], ...variants.map(() => [])];
       room.tiles.forEach((line, row) => {
         for (let col = 0; col < line.length; col++) {
-          const center = tileCenter(room.index, col, row);
+          const roll = spotHash(room.index, col, row);
+          const odd =
+            variants.length > 0 &&
+            line[col] !== '#' &&
+            roll % 100 < FLOOR_VARIANT_SHARE;
+          spots[odd ? 1 + (roll % variants.length) : 0].push(
+            tileCenter(room.index, col, row),
+          );
+        }
+      });
+      [tile, ...variants].forEach((mesh, kind) => {
+        const tiles = new THREE.InstancedMesh(
+          mesh.geometry,
+          sceneryTint(tone, mesh.material),
+          spots[kind].length,
+        );
+        tiles.name = kind ? 'floorVariant' : 'floor';
+        spots[kind].forEach((center, i) => {
           matrix.compose(
             new THREE.Vector3(center.x, -top, -center.y),
             still,
             scale,
           );
-          tiles.setMatrixAt(i++, matrix);
-        }
+          tiles.setMatrixAt(i, matrix);
+        });
+        group.add(tiles);
       });
-      group.add(tiles);
     } else {
       const floor = new THREE.Mesh(geo.floor, papers.floor.material);
       floor.name = 'floor';
@@ -1362,7 +1428,14 @@ export function createWorldRenderer(
 
     // `along`: a parede segue pela coluna (vizinho de parede em cima ou
     // embaixo, e nenhum dos lados): o bloco do kit gira para acompanhar
-    const walls: (Vec2 & { along: boolean })[] = [];
+    // `open`: a face da parede virada para a camera da para o chao da sala
+    // (e onde cabe tocha e estandarte)
+    const walls: (Vec2 & {
+      along: boolean;
+      open: boolean;
+      col: number;
+      row: number;
+    })[] = [];
     const solid = (row: number, col: number) => room.tiles[row]?.[col] === '#';
     room.tiles.forEach((line, row) => {
       for (let col = 0; col < line.length; col++) {
@@ -1374,12 +1447,16 @@ export function createWorldRenderer(
               !solid(row, col - 1) &&
               !solid(row, col + 1) &&
               (solid(row - 1, col) || solid(row + 1, col)),
+            open: room.tiles[row + 1] !== undefined && !solid(row + 1, col),
+            col,
+            row,
           });
         }
       }
     });
-    // saida da sala inicial e de cada loja: porta na face de dentro da parede
-    if (room.index % SHOP_EVERY === 0) {
+    // saida com porta (sala inicial, mercador, entrada e saida da arena do
+    // chefe): na face de dentro da parede
+    if (hasExitDoor(room.index)) {
       const y = (room.index + 1) * ROOM_H - 1;
       const door = buildDoor();
       // porta de correr no meio da parede; a largura da sala muda por modo
@@ -1405,6 +1482,40 @@ export function createWorldRenderer(
       group.add(chest.group);
     }
 
+    // mobilia fixa e pilar: um por tile do template. Do kit, centrado no
+    // tile e com o pe no chao; sem kit, uma caixa
+    room.tiles.forEach((line, row) => {
+      for (let col = 0; col < line.length; col++) {
+        const pillar = line[col] === 'P';
+        if (!pillar && !isFurniture(line[col])) continue;
+        const center = tileCenter(room.index, col, row);
+        const item = new THREE.Group();
+        item.name = 'furniture';
+        item.position.set(center.x, 0, -center.y);
+        const placed = SCENERY.furniture?.[line[col]];
+        const piece = placed && scenery?.clone(placed.piece);
+        if (piece && placed) {
+          piece.scale.setScalar(placed.scale);
+          if (placed.height) piece.scale.y = WALL_HEIGHT / placed.height;
+          const box = new THREE.Box3().setFromObject(piece);
+          piece.position.x -= (box.min.x + box.max.x) / 2;
+          piece.position.y -= box.min.y;
+          piece.position.z -= (box.min.z + box.max.z) / 2;
+          item.add(piece);
+        } else {
+          const block = new THREE.Mesh(
+            geo.wall,
+            pillar ? papers.wall.material : mat.wood,
+          );
+          const tall = pillar ? 1 : 0.5;
+          block.scale.set(0.8, tall, 0.8);
+          block.position.y = (WALL_HEIGHT * tall) / 2;
+          item.add(block);
+        }
+        group.add(item);
+      }
+    });
+
     if (brick) {
       // parede do kit: o meio muro encolhido para 1 tile de comprido e a
       // altura de parede do jogo, um por tile
@@ -1413,7 +1524,7 @@ export function createWorldRenderer(
         .translate(-SCENERY.wall.length / 2, 0, 0);
       const blocks = new THREE.InstancedMesh(
         wallBlock,
-        sceneryTint(level, brick.material),
+        sceneryTint(tone, brick.material),
         walls.length,
       );
       blocks.name = 'walls';
@@ -1437,6 +1548,7 @@ export function createWorldRenderer(
         blocks.setMatrixAt(i, matrix);
       });
       group.add(blocks);
+      decorate(room, group, walls, level);
     } else {
       const instanced = new THREE.InstancedMesh(
         geo.wall,
@@ -1452,6 +1564,93 @@ export function createWorldRenderer(
     }
     scene.add(group);
     return group;
+  }
+
+  // Tochas e estandartes do kit nas paredes. So desenho: nada disso existe
+  // na simulacao. A escolha dos lugares sai da posicao, entao a mesma sala
+  // tem sempre a mesma decoracao.
+  function decorate(
+    room: Room,
+    group: THREE.Group,
+    walls: (Vec2 & { open: boolean; col: number; row: number })[],
+    level: number,
+  ) {
+    const boss = room.kind === 'boss';
+    const faces = walls.filter((wall) => wall.open);
+    const roll = (wall: { col: number; row: number }) =>
+      spotHash(room.index, wall.col, wall.row);
+    // face da parede virada para a camera, em coordenadas da cena
+    const faceZ = (wall: Vec2) => -wall.y + 0.5;
+
+    const torch = SCENERY.torch && scenery?.mesh(SCENERY.torch.piece);
+    const lit = torch
+      ? faces.filter((wall) => roll(wall) % (boss ? 2 : TORCH_EVERY) === 0)
+      : [];
+    if (torch && SCENERY.torch && lit.length > 0) {
+      const size = SCENERY.torch.scale;
+      const bodies = new THREE.InstancedMesh(
+        torch.geometry,
+        torch.material,
+        lit.length,
+      );
+      bodies.name = 'torches';
+      const flames = new THREE.InstancedMesh(
+        geo.torchFlame,
+        mat.torchFlame,
+        lit.length,
+      );
+      const glows = new THREE.InstancedMesh(
+        geo.aura,
+        mat.torchGlow,
+        lit.length,
+      );
+      // poca de luz no chao, na frente da tocha: e o que mais se ve de cima
+      const pools = new THREE.InstancedMesh(
+        geo.torchPool,
+        mat.torchPool,
+        lit.length,
+      );
+      pools.name = 'torchPools';
+      const matrix = new THREE.Matrix4();
+      const still = new THREE.Quaternion();
+      lit.forEach((wall, i) => {
+        const z = faceZ(wall);
+        matrix.compose(
+          new THREE.Vector3(wall.x, TORCH_Y, z),
+          still,
+          new THREE.Vector3(size, size, size),
+        );
+        bodies.setMatrixAt(i, matrix);
+        // chama e clarao na ponta, um pouco para fora da parede
+        const tip = new THREE.Vector3(wall.x, TORCH_Y + 0.5, z + 0.28);
+        matrix.compose(tip, still, new THREE.Vector3(1.6, 1.6, 1.6));
+        flames.setMatrixAt(i, matrix);
+        matrix.compose(tip, still, new THREE.Vector3(1.2, 1.2, 1.2));
+        glows.setMatrixAt(i, matrix);
+        matrix.makeTranslation(wall.x, TORCH_POOL_Y, z + 0.75);
+        pools.setMatrixAt(i, matrix);
+      });
+      group.add(bodies, flames, glows, pools);
+    }
+
+    const banners = SCENERY.banners ?? [];
+    if (banners.length === 0) return;
+    // na parede do fundo, onde nao ha tocha; a arena do chefe leva a primeira
+    // cor, os niveis revezam as outras
+    const piece = boss
+      ? banners[0]
+      : banners[banners.length > 1 ? 1 + (level % (banners.length - 1)) : 0];
+    for (const wall of faces) {
+      if (wall.row !== 0 || lit.includes(wall)) continue;
+      if (roll(wall) % BANNER_EVERY !== 1) continue;
+      const banner = scenery?.clone(piece);
+      if (!banner) return;
+      banner.name = 'wallBanner';
+      // o estandarte do kit pende de uma parede de 4 de altura e 1 de grossura
+      banner.scale.set(0.5, WALL_HEIGHT / SCENERY.wall.height, 0.5);
+      banner.position.set(wall.x, 0, faceZ(wall) - 0.25);
+      group.add(banner);
+    }
   }
 
   function removeRoom(group: THREE.Group) {
@@ -1984,8 +2183,12 @@ export function createWorldRenderer(
     // Tipo com modelo: o corpo de pecas aparece ate o arquivo chegar e some
     // quando o modelo entra. O root continua o mesmo: posicao, sombra e
     // marcadores nao mudam. Sem o arquivo (offline, teste), fica o de pecas.
-    const model = ENEMY_MODELS[kind];
+    // a cara deste inimigo, entre as do tipo dele: sempre a mesma para o id
+    const faces = ENEMY_MODELS[kind] ?? [];
+    const model = faces[seed % Math.max(1, faces.length)];
     if (model) {
+      // escondido ate o modelo chegar: o de pecas so aparece se ele falhar
+      character.lean.visible = false;
       loadCharacterView(model).then(
         (body) => {
           if (view.removed) return body.dispose();
@@ -2003,7 +2206,9 @@ export function createWorldRenderer(
           gun.position.set(-gripX * size, -gripY * size, 0);
           body.slot('rightHand')?.add(gun);
         },
-        () => {},
+        () => {
+          character.lean.visible = true;
+        },
       );
     }
     return view;
@@ -2104,6 +2309,18 @@ export function createWorldRenderer(
     return TALK_LINES[(turn + enemy.id) % TALK_LINES.length];
   }
 
+  // Perseguicao: quem esta em alerta grita de vez em quando. Cada inimigo tem
+  // o proprio ritmo (pelo id), e so metade deles fala em cada turno, para a
+  // tela nao encher de balao. So visual.
+  function taunt(enemy: Enemy, time: number): string | null {
+    if (enemy.state !== 'alert') return null;
+    const beat = time / CHASE_TALK_TURN + enemy.id * 0.61;
+    const turn = Math.floor(beat);
+    if ((turn + enemy.id) % 2 !== 0 || beat - turn > 0.55) return null;
+    const lines = getTexts().game.chaseLines;
+    return lines[(turn * 7 + enemy.id) % lines.length];
+  }
+
   function removeEnemy(view: EnemyView) {
     view.removed = true;
     view.body?.dispose();
@@ -2150,8 +2367,10 @@ export function createWorldRenderer(
     // raiva depois de matar: marca sobre a cabeca e contorno vermelho
     rage: THREE.Group;
     enraged: boolean;
-    // corpo de modelo (PLAYER_MODEL), no lugar do de pecas; null ate chegar
+    // corpo de modelo (PLAYER_OUTFITS), no lugar do de pecas; null ate chegar
     body: CharacterView | null;
+    // o modelo ainda esta a caminho: nada do corpo aparece
+    pending: boolean;
     // o que o modelo leva na mao direita quando nao esta com arma de alcance
     blade: THREE.Object3D | null;
     removed: boolean;
@@ -2224,18 +2443,21 @@ export function createWorldRenderer(
         ? nameTag(player.name, player.color ?? COLORS.ui.white)
         : null,
       body: null,
+      pending: true,
       blade: null,
       removed: false,
       spinning: false,
       lastSlash: 0,
     };
-    // Mesmo esquema do inimigo: o de pecas aparece ate o modelo chegar.
-    if (PLAYER_MODEL) {
-      const { rig } = PLAYER_MODEL;
-      loadCharacterView(PLAYER_MODEL).then(
+    // Mesmo esquema do inimigo: o de pecas so aparece se o modelo falhar.
+    const outfit = PLAYER_OUTFITS[look.outfit] ?? PLAYER_OUTFITS.rogueHooded;
+    {
+      const { rig } = outfit;
+      loadCharacterView(outfit).then(
         (body) => {
           if (view.removed) return body.dispose();
           view.body = body;
+          view.pending = false;
           jumper.character.root.add(body.object);
           const hand = body.slot('rightHand');
           view.blade = hand?.children[0] ?? null;
@@ -2251,7 +2473,9 @@ export function createWorldRenderer(
           socket.add(view.held.mount);
           hand?.add(socket);
         },
-        () => {},
+        () => {
+          view.pending = false;
+        },
       );
     }
     return view;
@@ -2315,7 +2539,7 @@ export function createWorldRenderer(
     body.shadow.visible = !lost;
     // invisivel: some o corpo, fica so a sombra no chao
     const shown = lost || who.invisible <= 0;
-    body.lean.visible = shown && !view.body;
+    body.lean.visible = shown && !view.body && !view.pending;
     if (view.body) {
       view.body.object.visible = shown;
       if (view.blade) view.blade.visible = !armed;
@@ -2464,6 +2688,10 @@ export function createWorldRenderer(
       rageColor.setRGB(0.55 + 0.45 * fury, 0.04 + 0.1 * fury, 0.04);
       mat.rage.color.copy(rageColor);
       mat.rageOutline.color.copy(rageColor);
+      // chama das tochas: tremula sem nunca apagar
+      const flicker = Math.sin(time * 13) * 0.07 + Math.sin(time * 29) * 0.04;
+      mat.torchGlow.opacity = 0.42 + flicker;
+      mat.torchPool.opacity = 0.3 + flicker;
       lastTime = time;
       // congela junto com o jogo: pausado ou na loja, nada cai
       if (world.status === 'playing' || world.status === 'dead') {
@@ -2731,7 +2959,11 @@ export function createWorldRenderer(
             }
           });
         }
-        say(view, dead ? null : chatter(world, enemy, time), time);
+        say(
+          view,
+          dead ? null : (chatter(world, enemy, time) ?? taunt(enemy, time)),
+          time,
+        );
         view.rage.visible = furious;
         view.rage.scale.setScalar(
           RAGE_MARK_SIZE * (1 + Math.sin(time * 9 + enemy.id) * 0.22),

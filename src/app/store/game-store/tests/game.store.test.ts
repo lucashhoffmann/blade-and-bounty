@@ -284,3 +284,38 @@ it('setLook aceita tamanho da arma dentro da faixa propria', () => {
   expect(useGameStore.getState().look.weapon).toBe(WEAPON_SCALE.min);
   setLook({ weapon: 1 });
 });
+
+it('personagem do player: so aceita os que existem, e save antigo ganha o padrao', () => {
+  const store = () => useGameStore.getState();
+  store().setLook({ outfit: 'mage' });
+  expect(store().look.outfit).toBe('mage');
+  // valor que nao existe (save adulterado) nao entra
+  store().setLook({ outfit: 'dragon' as never });
+  expect(store().look.outfit).toBe('mage');
+
+  // look salvo antes de existir a escolha
+  const old: Partial<typeof DEFAULT_LOOK> = { ...DEFAULT_LOOK };
+  delete old.outfit;
+  useGameStore.setState({ look: old as typeof DEFAULT_LOOK });
+  store().setLook({ weapon: 1 });
+  expect(store().look.outfit).toBe(DEFAULT_LOOK.outfit);
+});
+
+it('hud avisa quando ha perseguicao: algum inimigo em alerta', () => {
+  const store = () => useGameStore.getState();
+  store().startRun(1);
+  store().begin();
+  const step = () => store().tick({ moveX: 0, moveY: 0, dash: false }, 1 / 60);
+  step();
+  expect(store().hud.chased).toBe(false);
+
+  const enemy = getWorld()!.enemies[0];
+  enemy.state = 'alert';
+  enemy.alertTimer = 5;
+  step();
+  expect(store().hud.chased).toBe(true);
+
+  enemy.state = 'dead';
+  step();
+  expect(store().hud.chased).toBe(false);
+});

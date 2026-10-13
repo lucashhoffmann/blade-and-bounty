@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { preloadGameAssets } from '@/app/engine/assets.preload';
 import { createGameEngine } from '@/app/engine/game-engine';
 import { renderWeaponPreviews } from '@/app/engine/weapon-preview';
 import { useGameStore } from '@/app/store/game-store/game.store';
@@ -38,6 +39,18 @@ export function useGamePage() {
     const engine = createGameEngine(canvasRef.current);
     return () => engine.dispose();
   }, []);
+
+  // Modelos e cenario chegam pela rede: ate la a tela fica coberta, para
+  // ninguem ver a sala se montar aos pedacos. Nunca trava: a espera tem teto.
+  const outfit = useGameStore((state) => state.look.outfit);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void preloadGameAssets(outfit).then(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [outfit]);
 
   // a mesma legenda serve de abertura da run e de tela de pausa
   // fotos das armas para o HUD, tiradas uma vez por montagem
@@ -80,6 +93,10 @@ export function useGamePage() {
         };
 
   return {
+    loading,
+    loadingLabel: t.game.loading,
+    bossLabel: t.game.boss,
+    bossWarning: t.game.bossWarning,
     canvasRef,
     screen,
     hud,

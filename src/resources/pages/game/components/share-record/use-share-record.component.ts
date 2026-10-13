@@ -53,7 +53,7 @@ function drawCard(
   };
 
   line('BLADE', 430, 230, COLORS.ui.white);
-  line('& BOUNTY', 660, 230, COLORS.ui.brandPink);
+  line('& BOUNTY', 660, 230, COLORS.ui.brand);
   line(getTexts().share.myRecord, 980, 96, COLORS.ui.highlight);
   line(getTexts().share.room(best), 1220, 330, COLORS.ui.white);
   line(getTexts().share.run(room, kills), 1470, 60, COLORS.ui.cardText);

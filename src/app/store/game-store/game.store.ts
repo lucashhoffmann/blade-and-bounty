@@ -1,5 +1,7 @@
 import { COLORS } from '@/shared/colors';
 import { create } from 'zustand';
+
+import { bossMaxHp } from '@/app/modules/level/systems/level.system';
 import { persist } from 'zustand/middleware';
 
 import {
@@ -26,7 +28,11 @@ import {
   predictStep,
   reconcile,
 } from '@/app/modules/multiplayer/utils/prediction.util';
-import { tileCenter } from '@/app/modules/level/utils/grid.util';
+import {
+  tileCenter,
+  bossOf,
+  roomIndexAt,
+} from '@/app/modules/level/utils/grid.util';
 import {
   ROOM_H,
   ROOM_W,
@@ -90,6 +96,11 @@ export type Hud = {
   // curso, em passos de 5%; 0 = sem o efeito
   invisible: number;
   invincible: number;
+  // chefe vivo na sala do player: fracao da vida dele (0 a 1, passos de 5%);
+  // 0 = sem chefe por perto
+  boss: number;
+  // algum inimigo em alerta: a tela pulsa em vermelho
+  chased: boolean;
   // saltos guardados, de 0 a DASH_MAX
   dashes: number;
   // fichas de revive guardadas, de 0 a REVIVE_MAX
@@ -128,7 +139,12 @@ export type PlayerLook = {
   feet: number;
   // espada e armas de alcance na mao; faixa propria (WEAPON_SCALE)
   weapon: number;
+  // qual personagem de modelo o player usa (character-models.config.ts)
+  outfit: OutfitId;
 };
+
+export const OUTFIT_IDS = ['rogueHooded', 'rogue', 'mage'] as const;
+export type OutfitId = (typeof OUTFIT_IDS)[number];
 
 export const LOOK_SCALE = { min: 0.7, max: 1.4 };
 export const WEAPON_SCALE = { min: 0.4, max: 1.4 };
@@ -143,6 +159,7 @@ export const DEFAULT_LOOK: PlayerLook = {
   hands: 1,
   feet: 1,
   weapon: 1,
+  outfit: 'rogueHooded',
 };
 
 export const DEFAULT_BLOOD_COLOR = COLORS.ui.bloodDefault;
@@ -206,6 +223,11 @@ function mergeLook(look: PlayerLook, patch: Partial<PlayerLook>): PlayerLook {
       next[key] = Math.min(range.max, Math.max(range.min, value));
     }
   }
+  if (patch.outfit && OUTFIT_IDS.includes(patch.outfit)) {
+    next.outfit = patch.outfit;
+  }
+  // save antigo, de antes de existir a escolha
+  next.outfit ??= DEFAULT_LOOK.outfit;
   return next;
 }
 
@@ -273,6 +295,8 @@ const EMPTY_HUD: Hud = {
   shield: 0,
   invisible: 0,
   invincible: 0,
+  boss: 0,
+  chased: false,
   dashes: 0,
   revives: 0,
   money: 0,
@@ -351,7 +375,12 @@ function timeLeft(seconds: number, total: number): number {
 }
 
 function readHud(w: World): Hud {
+  const arena = roomIndexAt(w.player.pos.y);
+  const boss = bossOf(w, arena);
   return {
+    boss: boss ? timeLeft(boss.hp, bossMaxHp(arena)) : 0,
+    chased:
+      w.player.hp > 0 && w.enemies.some((enemy) => enemy.state === 'alert'),
     hp: Math.max(0, w.player.hp),
     maxHp: w.player.maxHp,
     shield: w.player.shield,

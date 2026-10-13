@@ -38,11 +38,11 @@ type ShopDialogProps = {
 
 // cor do cartao de cada item: so visual
 const CARD_COLOR: Record<ItemId, string> = {
-  bow: 'bg-sky-500',
-  metalBow: 'bg-violet-500',
-  crossbow: 'bg-orange-500',
-  armor: 'bg-emerald-500',
-  dash: 'bg-cyan-600',
+  bow: 'bg-amber-700',
+  metalBow: 'bg-slate-500',
+  crossbow: 'bg-orange-800',
+  armor: 'bg-stone-500',
+  dash: 'bg-yellow-700',
 };
 
 function describeItem(item: ItemDef): string {
@@ -97,7 +97,7 @@ function ItemCard({
     >
       <span
         className={cn(
-          'flex w-full flex-col items-center gap-1 rounded-2xl border-4 border-white p-2 text-white shadow-lg transition-transform group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-yellow-300 group-disabled:translate-y-0 group-disabled:opacity-60 group-disabled:saturate-50',
+          'flex w-full flex-col items-center gap-1 rounded-2xl border-4 border-[var(--game-frame)] p-2 text-white shadow-lg transition-transform group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-yellow-300 group-disabled:translate-y-0 group-disabled:opacity-60 group-disabled:saturate-50',
           CARD_COLOR[item.id],
         )}
       >
@@ -137,7 +137,7 @@ function ItemCard({
                 : t.shop.fullAmmo}
         </span>
       </span>
-      <span className='flex items-center gap-1.5 rounded-xl border-4 border-white bg-green-500 px-3 text-base font-black text-white shadow-md group-disabled:bg-slate-500 group-disabled:text-white/70 sm:py-0.5 sm:text-lg'>
+      <span className='flex items-center gap-1.5 rounded-xl border-4 border-[var(--game-frame)] bg-green-500 px-3 text-base font-black text-white shadow-md group-disabled:bg-slate-500 group-disabled:text-white/70 sm:py-0.5 sm:text-lg'>
         <Banknote
           aria-hidden
           className='size-5'
@@ -148,7 +148,7 @@ function ItemCard({
         {refill === undefined ? (
           <PriceChange change={percent(price / item.price)} />
         ) : (
-          <span className='text-sky-300'>{t.shop.owned}</span>
+          <span className='text-amber-200'>{t.shop.owned}</span>
         )}
       </span>
     </button>
@@ -182,7 +182,7 @@ export function ShopDialog({
         className='fill-mode-backwards max-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] gap-3 border-0 bg-black/45 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_0_0_100vmax_rgb(0_0_0/0.45)] delay-500 sm:max-w-2xl sm:gap-4 sm:p-6'
       >
         <DialogHeader className='items-center sm:text-center'>
-          <DialogTitle className='rounded-full border-4 border-white bg-[var(--game-panelTitle)] px-5 py-2 text-base font-black tracking-wide text-white uppercase shadow-lg'>
+          <DialogTitle className='rounded-full border-4 border-[var(--game-frame)] bg-[var(--game-panelTitle)] px-5 py-2 text-base font-black tracking-wide text-white uppercase shadow-lg'>
             {t.shop.title}
           </DialogTitle>
           <DialogDescription className='text-xs font-bold tracking-wide text-white/80 uppercase'>

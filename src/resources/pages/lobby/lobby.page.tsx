@@ -6,11 +6,11 @@ import { useTexts } from '@/shared/i18n';
 
 // botao brute de jogo, igual ao da home
 const CHUNKY =
-  'text-outline flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-4 border-white px-5 py-2 text-lg text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100';
+  'text-outline flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-4 border-[var(--game-frame)] px-5 py-2 text-lg text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100';
 const PANEL =
   'flex w-full flex-col gap-3 rounded-2xl border-4 border-white/80 bg-[var(--game-panel)] p-4';
 const FIELD =
-  'w-full rounded-xl border-4 border-white bg-[var(--game-ink)] px-3 py-2 font-sans text-lg font-bold text-white outline-none focus:border-[var(--game-highlight)]';
+  'w-full rounded-xl border-4 border-[var(--game-frame)] bg-[var(--game-ink)] px-3 py-2 font-sans text-lg font-bold text-white outline-none focus:border-[var(--game-highlight)]';
 
 // Sala de espera do multiplayer, em tres passos: nome, listagem de sessoes e
 // sessao (quem entrou e o codigo de convite).
@@ -54,7 +54,7 @@ export function LobbyPage() {
       {error && (
         <p
           role='alert'
-          className='rounded-xl bg-[var(--game-brandPink)] px-4 py-2 font-sans text-sm font-bold text-white'
+          className='rounded-xl bg-[var(--game-brand)] px-4 py-2 font-sans text-sm font-bold text-white'
         >
           {error}
         </p>
@@ -206,7 +206,7 @@ export function LobbyPage() {
                 >
                   <span
                     aria-hidden
-                    className='size-5 shrink-0 rounded-full border-2 border-white'
+                    className='size-5 shrink-0 rounded-full border-2 border-[var(--game-frame)]'
                     style={{ background: player.color }}
                   />
                   <span

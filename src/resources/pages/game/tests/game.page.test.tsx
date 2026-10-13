@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { preloadGameAssets } from '@/app/engine/assets.preload';
 import { createGameEngine } from '@/app/engine/game-engine';
 import {
   createMarket,
@@ -20,6 +21,10 @@ import { useLanguage } from '@/shared/i18n';
 
 // jsdom nao tem WebGL
 const { dispose } = vi.hoisted(() => ({ dispose: vi.fn() }));
+// sem rede no teste: os modelos "chegam" na hora
+vi.mock('@/app/engine/assets.preload', () => ({
+  preloadGameAssets: vi.fn(() => Promise.resolve()),
+}));
 vi.mock('@/app/engine/game-engine', () => ({
   createGameEngine: vi.fn(() => ({ dispose })),
 }));
@@ -41,6 +46,8 @@ const HUD: HudData = {
   shield: 0,
   invisible: 0,
   invincible: 0,
+  boss: 0,
+  chased: false,
   dashes: 4,
   revives: 0,
   money: 250,
@@ -70,7 +77,7 @@ describe('Hud', () => {
       '50',
     );
     expect(screen.getByText('Sala 3')).toBeInTheDocument();
-    expect(screen.getByText('$ 250')).toBeInTheDocument();
+    expect(screen.getByText('250')).toBeInTheDocument();
     expect(screen.getByText('Arco')).toBeInTheDocument();
     expect(screen.getByLabelText('Flechas: 4 de 30')).toBeInTheDocument();
     expect(screen.getByText('NA MOSCA 15%')).toBeInTheDocument();
@@ -244,7 +251,7 @@ describe('Hud', () => {
     );
     expect(screen.getByText('Caçada 1')).toBeInTheDocument();
     expect(segments(shop.container, 'done')).toBe(4);
-    expect(screen.getByText('$')).toHaveAttribute('data-state', 'current');
+    expect(screen.getByText('◆')).toHaveAttribute('data-state', 'current');
     shop.unmount();
 
     render(
@@ -645,7 +652,7 @@ it('borda azul usa o mesmo pulso quando ha aviso de inatividade', () => {
   act(() => useGameStore.setState({ idleWarnings: 1 }));
   expect(screen.getByTestId('idle-vignette')).toHaveClass('animate-damage');
   expect(screen.getByTestId('idle-vignette').style.background).toContain(
-    '59, 130, 246',
+    '74, 120, 194',
   );
 });
 
@@ -790,4 +797,33 @@ describe('partida em rede: placar e menu', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ver placar' }));
     expect(onScoreboard).toHaveBeenCalled();
   });
+});
+
+it('cobre a tela enquanto os modelos baixam e libera depois', async () => {
+  let arrived = () => {};
+  vi.mocked(preloadGameAssets).mockReturnValueOnce(
+    new Promise<void>((resolve) => (arrived = resolve)),
+  );
+  render(<GamePage />);
+  expect(screen.getByText('Abrindo a masmorra...')).toBeInTheDocument();
+  await act(async () => arrived());
+  expect(screen.queryByText('Abrindo a masmorra...')).toBeNull();
+});
+
+it('perseguicao: borda vermelha pulsa enquanto ha inimigo em alerta', () => {
+  const chased = (on: boolean) =>
+    act(() =>
+      useGameStore.setState((state) => ({
+        hud: { ...state.hud, hp: 100, chased: on },
+      })),
+    );
+  chased(false);
+  render(<GamePage />);
+  expect(screen.queryByTestId('chase-vignette')).toBeNull();
+  chased(true);
+  expect(screen.getByTestId('chase-vignette')).toHaveClass(
+    'animate-low-health',
+  );
+  chased(false);
+  expect(screen.queryByTestId('chase-vignette')).toBeNull();
 });

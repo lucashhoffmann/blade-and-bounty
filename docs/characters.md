@@ -434,24 +434,55 @@ preparo e volta longos, e o golpe do jogo dura `SLASH_TIME` (0.36 s). O
 
 `character-models.config.ts`:
 
-| Quem     | Modelo (KayKit Adventurers) | Na mao                                      |
-| -------- | --------------------------- | ------------------------------------------- |
-| player   | Rogue Hooded                | espada; com arma de alcance, a arma do jogo |
-| `knight` | Knight                      | espada                                      |
-| `archer` | Ranger                      | arco do jogo                                |
-| `brute`  | Barbarian, 25% maior        | besta do jogo, clipe de tiro a 2 maos       |
+| Quem     | Modelo (KayKit Adventurers)                                                                       | Na mao                                    |
+| -------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| player   | o escolhido na tela de personagem (`look.outfit`): Rogue Hooded, Rogue ou Mage (`PLAYER_OUTFITS`) | espada; com arco ou besta, a arma do jogo |
+| `knight` | Knight, Skeleton Minion ou Skeleton Rogue                                                         | espada, ou a lamina de esqueleto          |
+| `archer` | Ranger ou Skeleton Mage                                                                           | arco do jogo                              |
+| `brute`  | Barbarian, 25% maior                                                                              | besta do jogo, clipe de tiro a 2 maos     |
+| `boss`   | Skeleton Warrior, 1.9 vez maior                                                                   | machado                                   |
 
-As armas de alcance sao os modelos de `weapon.renderer.ts`, os mesmos do HUD: so
-mudam de lugar, do braco de pecas para a mao do modelo.
+Cada tipo de inimigo tem uma lista de caras (`ENEMY_MODELS[kind]` e um
+array). A de cada inimigo sai do `id` dele: e sempre a mesma, e e so visual,
+a simulacao trata todos do tipo igual. Mais variedade = mais um item na
+lista. Os esqueletos vem do KayKit Skeletons 1.1 (mesmo esqueleto
+`Rig_Medium`, mesmos clipes).
+
+As armas de alcance sao os modelos de `weapon.renderer.ts`, os mesmos do HUD.
+
+A tela de personagem (`character-preview.ts`) mostra o mesmo modelo da
+partida, parado e respirando, com a arma escolhida na mao. Cor e proporcao
+vem do modelo: o editor so escolhe quem o player e e o tamanho da arma. Os
+outros campos de `PlayerLook` (cores, escalas) so valem para o corpo de
+pecas, que hoje so aparece se o modelo falhar.
+
+### Carregamento
+
+Os arquivos chegam pela rede, entao ha tres cuidados para o jogador nunca ver
+o desenho antigo piscar:
+
+1. **aquecimento**: `App` chama `preloadGameAssets(outfit)` ja no menu.
+   Quando o jogador aperta Play, quase sempre esta tudo em cache
+2. **tela de carregamento**: `GamePage` cobre a tela ("Abrindo a
+   masmorra...") ate `preloadGameAssets` resolver. Ela resolve quando tudo
+   chegou, ou falhou, ou passou `PRELOAD_TIMEOUT`: nunca trava a partida
+3. **corpo escondido**: enquanto o modelo de um personagem nao chega, o corpo
+   de pecas fica invisivel. So aparece se o carregamento falhar
+
+`preloadGameAssets` (`engine/assets.preload.ts`) baixa o kit de cenario, o
+modelo do personagem escolhido e os de todos os inimigos. Os carregadores
+guardam cada arquivo interpretado (`character-model.loader.ts`,
+`scenery/model-kit.ts`), entao depois disso montar um corpo ou um kit nao
+espera rede.
 
 ### Como entra no jogo
 
 Em `world.renderer.ts`, igual para inimigo (`buildEnemy`) e player
 (`buildPlayer`):
 
-1. monta o personagem de pecas como sempre e pede `loadCharacterView`
-2. enquanto o arquivo nao chega, o jogador ve o de pecas. Quando chega, o
-   corpo de modelo entra no `root` e o `lean` (corpo de pecas) e escondido
+1. monta o personagem de pecas como sempre, com o corpo (`lean`) escondido,
+   e pede `loadCharacterView`
+2. quando o arquivo chega, o corpo de modelo entra no `root`
 3. a cada quadro, depois de animar o de pecas, `body.pose(...)` recebe a
    mesma fase
 4. morto: o modelo cai pelo clipe, entao o `root` fica de pe (no de pecas e o
@@ -460,7 +491,7 @@ Em `world.renderer.ts`, igual para inimigo (`buildEnemy`) e player
    vermelho), ja que nao ha contorno
 6. quem sai de cena chama `dispose`; modelo que chega depois disso e
    descartado
-7. arquivo que nao chega (offline, erro): fica o de pecas, sem aviso
+7. arquivo que nao chega (offline, erro): o corpo de pecas aparece no lugar
 
 O `root` de pecas continua sendo animado por baixo, escondido. Custa pouco e
 e o que mantem posicao, sombra e marcadores iguais para os dois corpos.
@@ -537,9 +568,6 @@ Nada mais muda: view, driver e carregador sao os mesmos.
 
 ### O que falta
 
-- **aparencia do player nao vale no modelo.** Cores e escalas de `PlayerLook`
-  so mexem no personagem de pecas, e o editor (`character-preview.ts`) ainda
-  mostra o de pecas: o que se edita la nao e o que aparece na partida
 - **multiplayer**: todo jogador usa o mesmo modelo, sem a cor de cada um. So
   o nome sobre a cabeca distingue
 - **tema**: os modelos sao medievais (cavaleiro, arqueiro, barbaro) num jogo

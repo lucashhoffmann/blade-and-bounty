@@ -15,7 +15,7 @@ import { useLanguage, useTexts } from '@/shared/i18n';
 
 // botao brute de jogo: borda branca, sombra dura embaixo, afunda ao clicar
 const CHUNKY =
-  'text-outline flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-4 border-white text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none';
+  'text-outline flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-4 border-[var(--game-frame)] text-white uppercase shadow-[0_5px_0_var(--game-ink)] transition-transform hover:scale-105 active:translate-y-1 active:shadow-none';
 const SECONDARY = `${CHUNKY} w-full bg-[var(--game-secondary)] px-5 py-2 text-lg`;
 
 export function HomePage() {
@@ -35,27 +35,40 @@ export function HomePage() {
   // centralizam; faltando, encostam no topo sem cortar nada. touch-pan-y: o
   // body bloqueia gestos de toque por causa do jogo.
   return (
-    <main className='game-menu-background font-display relative flex h-full touch-pan-y flex-col items-center gap-7 overflow-x-hidden overflow-y-auto p-6 text-center'>
-      {/* Spot no teto iluminando o titulo: refletor, facho que abre para
-          baixo e a poca de luz onde ele bate. O facho balanca bem e a lampada
-          falha de vez em quando (spotlight-light, em index.css). */}
+    <main className='game-menu-background font-display relative flex h-full touch-pan-y flex-col items-center gap-7 overflow-x-hidden overflow-y-auto p-6 pt-28 text-center'>
+      {/* Lampiao pendurado iluminando o titulo: corrente, corpo de ferro com
+          a chama dentro, luz amarela que abre para baixo e a poca onde ela
+          bate. Balanca na corrente e a chama tremula (spotlight-light, em
+          index.css). */}
       <div
         aria-hidden
         className='spotlight pointer-events-none absolute top-0 left-1/2 h-[68vh] w-[min(150vw,60rem)] origin-top'
       >
-        <div className='spotlight-light absolute inset-0 bg-gradient-to-b from-white/45 via-white/12 to-transparent blur-md [clip-path:polygon(47%_0,53%_0,100%_100%,0_100%)]' />
-        {/* miolo mais forte do facho */}
-        <div className='spotlight-light absolute inset-0 bg-gradient-to-b from-white/35 via-white/8 to-transparent blur-sm [clip-path:polygon(48.5%_0,51.5%_0,70%_100%,30%_100%)]' />
-        <div className='absolute top-0 left-1/2 h-5 w-16 -translate-x-1/2 rounded-b-xl border-x-4 border-b-4 border-[var(--game-ink)] bg-[var(--game-ceiling)]' />
-        <div className='spotlight-light absolute top-3 left-1/2 h-3 w-10 -translate-x-1/2 rounded-full bg-white shadow-[0_0_24px_10px_rgb(255_255_255/0.75)]' />
+        <div className='spotlight-light absolute inset-x-0 top-14 bottom-0 bg-gradient-to-b from-amber-300/45 via-amber-400/12 to-transparent blur-md [clip-path:polygon(46%_0,54%_0,100%_100%,0_100%)]' />
+        {/* miolo mais forte da luz */}
+        <div className='spotlight-light absolute inset-x-0 top-14 bottom-0 bg-gradient-to-b from-yellow-200/35 via-amber-300/8 to-transparent blur-sm [clip-path:polygon(48%_0,52%_0,70%_100%,30%_100%)]' />
+        <div
+          data-testid='lantern'
+          className='absolute top-0 left-1/2 flex -translate-x-1/2 flex-col items-center'
+        >
+          {/* corrente e argola */}
+          <div className='h-7 w-1 bg-[var(--game-ink)]' />
+          <div className='-mb-1 size-3 rounded-full border-[3px] border-[var(--game-ink)]' />
+          {/* tampa, vidro com a chama e base */}
+          <div className='h-2 w-9 rounded-t-lg bg-[var(--game-ink)]' />
+          <div className='spotlight-light relative flex h-11 w-7 items-end justify-center border-x-[3px] border-[var(--game-ink)] bg-amber-200/90 shadow-[0_0_34px_14px_rgb(255_184_64/0.7)]'>
+            <div className='mb-1 h-6 w-3 rounded-[50%_50%_50%_50%/65%_65%_35%_35%] bg-gradient-to-t from-orange-500 via-amber-300 to-yellow-100' />
+          </div>
+          <div className='h-2 w-9 rounded-b-md bg-[var(--game-ink)]' />
+        </div>
       </div>
       <div
         aria-hidden
-        className='spotlight-light pointer-events-none absolute top-[22%] left-1/2 h-[46vh] w-[min(130vw,48rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgb(255_255_255/0.2)_0%,rgb(255_255_255/0.06)_45%,transparent_70%)]'
+        className='spotlight-light pointer-events-none absolute top-[22%] left-1/2 h-[46vh] w-[min(130vw,48rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgb(255_196_87/0.24)_0%,rgb(255_170_60/0.07)_45%,transparent_70%)]'
       />
-      <h1 className='text-outline relative mt-auto flex -rotate-3 flex-col text-6xl leading-none tracking-wide uppercase sm:text-7xl'>
+      <h1 className='text-outline relative mt-auto flex -rotate-3 flex-col font-[family-name:var(--font-title)] text-6xl leading-none tracking-wide uppercase sm:text-7xl'>
         <span className='text-white'>Blade</span>{' '}
-        <span className='text-[1.15em] text-[var(--game-brandPink)]'>
+        <span className='text-[1.15em] text-[var(--game-brand)]'>
           &amp; Bounty
         </span>
       </h1>
@@ -164,7 +177,7 @@ export function HomePage() {
           href='https://github.com/lucashhoffmann/'
           target='_blank'
           rel='noopener noreferrer'
-          className='text-[var(--game-brandPink)] underline-offset-4 hover:underline'
+          className='text-[var(--game-brand)] underline-offset-4 hover:underline'
         >
           Hoffmann
         </a>
