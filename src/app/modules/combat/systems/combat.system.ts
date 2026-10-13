@@ -1,7 +1,7 @@
 import {
   breakPropAt,
   breakPropsNear,
-  dropGolden,
+  dropBossPrize,
   dropRubies,
   dropLoot,
   hasLineOfSight,
@@ -158,9 +158,9 @@ export function killEnemy(world: World, enemy: Enemy): void {
     pos: { ...enemy.pos },
     value: enemy.kind === 'boss' ? BOSS_MONEY : KILL_MONEY,
   });
-  // chefe: sempre o premio do bau dourado
+  // chefe: o premio proprio dele, maior que o do bau dourado
   if (enemy.kind === 'boss') {
-    dropGolden(world, { roomIndex: enemy.roomIndex, pos: enemy.pos });
+    dropBossPrize(world, { roomIndex: enemy.roomIndex, pos: enemy.pos });
     if (world.mode === 'solo') {
       dropRubies(
         world,
@@ -605,7 +605,11 @@ export function collectPickups(world: World): void {
         },
         shield: {
           stat: 'shield',
-          cap: Math.round(player.maxHp * SHIELD_MAX),
+          // o do chefe (`over`) enche ate o proprio valor
+          cap: Math.max(
+            Math.round(player.maxHp * SHIELD_MAX),
+            pickup.over ? pickup.value : 0,
+          ),
           label: 'collectedShield',
         },
         dash: {

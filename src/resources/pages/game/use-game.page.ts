@@ -98,7 +98,6 @@ export function useGamePage() {
   return {
     loading,
     loadingLabel: t.game.loading,
-    bossLabel: t.game.boss,
     bossWarning: t.game.bossWarning,
     canvasRef,
     screen,

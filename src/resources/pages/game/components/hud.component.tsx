@@ -6,6 +6,7 @@ import {
   Heart,
   ListOrdered,
   Pause,
+  Skull,
 } from 'lucide-react';
 
 import { ITEMS } from '@/app/modules/shop/constants/shop.constants';
@@ -436,6 +437,33 @@ export function Hud({
           </button>
         )}
       </div>
+      {/* chefe vivo na sala: a vida dele, na largura toda, logo abaixo dos
+          tres blocos (nunca atras do joystick) */}
+      {hud.boss > 0 && (
+        <div className='animate-hud-in col-span-3 flex flex-col items-center gap-1'>
+          <p className='text-outline flex items-center gap-1.5 text-sm tracking-widest text-[var(--game-highlight)] uppercase sm:text-base'>
+            <Skull
+              aria-hidden
+              className='size-4 sm:size-5'
+              strokeWidth={2.5}
+            />
+            {t.game.boss}
+          </p>
+          <div
+            role='progressbar'
+            aria-label={t.game.boss}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(hud.boss * 100)}
+            className='h-3 w-[min(70vw,28rem)] overflow-hidden rounded-sm border-2 border-[var(--game-frame)] bg-black/60 shadow-[0_3px_0_var(--game-ink)] sm:h-4'
+          >
+            <div
+              className='h-full bg-gradient-to-b from-amber-400 to-orange-700 transition-[width] duration-300'
+              style={{ width: `${hud.boss * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
     </header>
   );
 }

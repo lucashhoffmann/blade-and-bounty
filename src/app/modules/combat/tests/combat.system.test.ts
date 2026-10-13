@@ -16,7 +16,10 @@ import { ITEMS } from '@/app/modules/shop/constants/shop.constants';
 import {
   ATTACK_COOLDOWN,
   BOSS_AMBUSH_DAMAGE,
+  BOSS_INVISIBILITY,
   BOSS_MONEY,
+  BOSS_SHIELD,
+  INVISIBILITY_MAX,
   DASH_MAX,
   ENEMY_ARROW_DAMAGE,
   ENEMY_ARROW_SPEED,
@@ -1236,7 +1239,7 @@ describe('chefe em combate', () => {
     expect(boss.state).not.toBe('dead');
   });
 
-  it('morto, solta BOSS_MONEY e o premio do bau dourado', () => {
+  it('morto, solta BOSS_MONEY e o premio dele: vida cheia, escudo acima do teto e invisibilidade longa', () => {
     const world = createArenaWorld();
     const boss = addEnemy(world, 5.5, 6.5, 0, 'boss');
     killEnemy(world, boss);
@@ -1244,16 +1247,22 @@ describe('chefe em combate', () => {
       kind: 'money',
       value: BOSS_MONEY,
     });
-    const prize = world.pickups.slice(1).map((pickup) => pickup.kind);
-    expect(prize.length).toBeGreaterThan(0);
-    for (const kind of prize) {
-      expect([
-        'heart',
-        'shield',
-        'invisibility',
-        'invincibility',
-        'ruby',
-      ]).toContain(kind);
-    }
+    const { maxHp } = world.player;
+    const prize = Object.fromEntries(
+      world.pickups.map((pickup) => [pickup.kind, pickup.value]),
+    );
+    expect(prize.heart).toBe(maxHp);
+    expect(prize.shield).toBe(Math.round(maxHp * BOSS_SHIELD));
+    expect(prize.shield).toBeGreaterThan(Math.round(maxHp * SHIELD_MAX));
+    expect(prize.invisibility).toBe(BOSS_INVISIBILITY);
+    expect(BOSS_INVISIBILITY).toBeGreaterThan(INVISIBILITY_MAX);
+
+    // coletado, o escudo passa do teto normal
+    world.player.hp = 1;
+    for (const pickup of world.pickups) pickup.pos = { ...world.player.pos };
+    collectPickups(world);
+    expect(world.player.hp).toBe(maxHp);
+    expect(world.player.shield).toBe(Math.round(maxHp * BOSS_SHIELD));
+    expect(world.player.invisible).toBe(BOSS_INVISIBILITY);
   });
 });

@@ -26,7 +26,6 @@ export function GamePage() {
     canvasRef,
     loading,
     loadingLabel,
-    bossLabel,
     bossWarning,
     screen,
     hud,
@@ -90,7 +89,6 @@ export function GamePage() {
       />
       <BossWarning
         boss={hud.boss}
-        label={bossLabel}
         warning={bossWarning}
       />
       <Hud

@@ -182,6 +182,8 @@ export type Pickup = {
   // dinheiro, pontos de vida, pontos de escudo, saltos ou flechas, conforme
   // `kind`
   value: number;
+  // escudo do premio do chefe: enche ate `value`, acima do teto normal
+  over?: boolean;
 };
 
 // 'metalBow' e o arco com silenciador

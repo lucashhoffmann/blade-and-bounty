@@ -133,13 +133,18 @@ export const ENEMY_KINDS: Record<EnemyKind, EnemyStats> = {
 // e na saida. Quem entra fica trancado ate ele morrer, e ele ja acorda em
 // alerta. Nao morre de execucao: o golpe em quem nao viu nada tira
 // BOSS_AMBUSH_DAMAGE. A vida cresce BOSS_HP_PER_FIGHT a cada chefe vencido.
-// Morto, solta BOSS_MONEY e o premio do bau dourado.
+// Morto, solta BOSS_MONEY e o premio proprio dele (abaixo).
 export const BOSS_EVERY = 2;
 export const BOSS_HP_PER_FIGHT = 0.5;
 export const BOSS_DAMAGE = 40;
 export const BOSS_REACH = 1.3;
 export const BOSS_AMBUSH_DAMAGE = 120;
 export const BOSS_MONEY = 300;
+// Premio do chefe (dropBossPrize em grid.util), os tres de uma vez: vida
+// cheia, escudo de BOSS_SHIELD da vida maxima (passa do teto SHIELD_MAX) e
+// BOSS_INVISIBILITY segundos de invisibilidade (mais que INVISIBILITY_MAX)
+export const BOSS_SHIELD = 0.6;
+export const BOSS_INVISIBILITY = 20;
 // Brute: mais raro que archer e knight, e nunca sozinho (a ronda dele sempre
 // nasce com parceiro). Uma dupla tambem fica de guarda, parada, ao lado do bau
 // da loja e de cada bau dourado. Nao salta. A besta solta BRUTE_PELLETS

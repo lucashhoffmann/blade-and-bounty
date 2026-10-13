@@ -481,8 +481,11 @@ Um `Enemy` de `kind` `'boss'`, numa sala de `kind` `'boss'`.
   `BOSS_REACH`; salta como o cavaleiro. Nao morre de execucao: golpe em
   chefe que nao viu o player tira `BOSS_AMBUSH_DAMAGE`, e o overkill pelas
   costas em alerta nao vale para ele (vira critico)
-- **premio**: `killEnemy` solta `BOSS_MONEY` e o premio do bau dourado
-  (`dropGolden`), sem sortear a tabela das caixas
+- **premio**: `killEnemy` solta `BOSS_MONEY` e o premio proprio dele
+  (`dropBossPrize`), sem sorteio, os tres de uma vez: `heart` cheio, `shield`
+  de `BOSS_SHIELD` da vida maxima com `Pickup.over` (enche acima do teto
+  `SHIELD_MAX`, ate o proprio valor) e `invisibility` de `BOSS_INVISIBILITY`
+  segundos, mais que o maximo do bau dourado
 - **HUD**: `Hud.boss` e a fracao da vida do chefe da sala do player (0 a 1,
   passos de 5%; 0 = sem chefe). Com ela acima de 0 a tela ganha a borda
   amarela pulsando (`DamageVignette` `color='yellow'` `loop`), o aviso que

@@ -26,12 +26,15 @@ import {
   RUBY_GOLDEN_CHANCE,
   RUBY_LOOT_CHANCE,
   BOSS_EVERY,
+  BOSS_INVISIBILITY,
+  BOSS_SHIELD,
   SHOP_EVERY,
   SHIELD_MAX,
   SHIELD_MIN,
 } from '@/app/modules/world/constants/world.constants';
 import type {
   Enemy,
+  Pickup,
   PickupKind,
   Prop,
   Vec2,
@@ -378,6 +381,34 @@ export function dropLoot(world: World, at: LootSpot): void {
   }
 }
 
+// larga os premios lado a lado em volta de `at`, para todos aparecerem
+function placePrizes(
+  world: World,
+  at: LootSpot,
+  prizes: Pick<Pickup, 'kind' | 'value' | 'over'>[],
+): void {
+  prizes.forEach((prize, i) => {
+    world.pickups.push({
+      id: world.nextId++,
+      ...prize,
+      roomIndex: at.roomIndex,
+      pos: { x: at.pos.x + (i - (prizes.length - 1) / 2) * 0.4, y: at.pos.y },
+    });
+  });
+}
+
+// Premio do chefe: os tres de uma vez, e maiores que os do bau dourado. Vida
+// cheia, escudo de BOSS_SHIELD da vida maxima (acima do teto normal) e
+// BOSS_INVISIBILITY segundos de invisibilidade. Sem sorteio.
+export function dropBossPrize(world: World, at: LootSpot): void {
+  const maxHp = Math.max(...world.players.map((player) => player.maxHp));
+  placePrizes(world, at, [
+    { kind: 'heart', value: maxHp },
+    { kind: 'shield', value: Math.round(maxHp * BOSS_SHIELD), over: true },
+    { kind: 'invisibility', value: BOSS_INVISIBILITY },
+  ]);
+}
+
 // Premio do bau dourado, um de quatro com a mesma chance: invisibilidade +
 // vida cheia, escudo cheio, vida cheia + escudo cheio, ou invencibilidade.
 // "Cheio" e pela maior vida maxima do grupo; o teto de quem coleta corta o
@@ -409,16 +440,7 @@ export function dropGolden(world: World, at: LootSpot): void {
       },
     ],
   ];
-  const prizes = sets[Math.floor(nextRandom(world) * sets.length)]();
-  prizes.forEach((prize, i) => {
-    world.pickups.push({
-      id: world.nextId++,
-      ...prize,
-      roomIndex: at.roomIndex,
-      // lado a lado dentro do tile, para os dois aparecerem
-      pos: { x: at.pos.x + (i - (prizes.length - 1) / 2) * 0.4, y: at.pos.y },
-    });
-  });
+  placePrizes(world, at, sets[Math.floor(nextRandom(world) * sets.length)]());
   // as vezes, uma moeda vermelha junto, um pouco a frente do premio
   if (world.mode === 'solo' && nextRandom(world) < RUBY_GOLDEN_CHANCE) {
     dropRubies(world, at, 1);
