@@ -123,7 +123,11 @@ export function createCharacterPreview(
       {
         ...REST,
         aiming: !!weapon,
-        style: weapon ? RANGED_STYLES[weapon] : look && playerModel(look).style,
+        style: weapon
+          ? RANGED_STYLES[weapon]
+          : look
+            ? playerModel(look).style
+            : undefined,
         emote:
           cheer > 0 ? { name: 'cheer', phase: 1 - cheer / CHEER_TIME } : null,
       },

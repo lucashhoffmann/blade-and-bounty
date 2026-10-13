@@ -142,6 +142,8 @@ const pt = {
     loading: 'Abrindo a masmorra...',
     boss: 'Chefe',
     bossWarning: 'O chefe despertou!',
+    // comentario de quem repara num objeto quebrado
+    brokenLines: ['Isso não estava assim', 'Quebrado?', 'Sujeira é essa?'],
     // gritos de quem esta perseguindo o player (balao sobre o inimigo)
     chaseLines: [
       'Ali!',
@@ -570,6 +572,7 @@ const en: typeof pt = {
     loading: 'Opening the dungeon...',
     boss: 'Boss',
     bossWarning: 'The boss has awakened!',
+    brokenLines: ["This wasn't like this", 'Broken?', "What's this mess?"],
     chaseLines: [
       'There!',
       'Get him!',

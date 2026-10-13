@@ -244,6 +244,14 @@ Estados:
 - conversa: so visual, na engine. Dois inimigos em `patrol`, sem furia, a
   menos de `TALK_RANGE` um do outro se revezam com um balao de fala sobre a
   cabeca (`chatter`, em `world.renderer.ts`)
+- objeto quebrado (`notice`, em `updateEnemies`): inimigo calmo, sem nada a
+  conferir, que ve (`canSee`) um `Prop` quebrado da propria sala ainda fora
+  de `Enemy.noticed` anota o `id` e sorteia (`rngState`): `PROP_IGNORE_CHANCE`
+  das vezes nem repara; senao `heard` vira o objeto (vai conferir por
+  `SEARCH_TIME`, como barulho) e `remark` recebe `PROP_REMARK_TIME`, com
+  `remarkOn` no `id`. Cada objeto e avaliado uma vez por inimigo. Com
+  `remark` acima de 0 e fora de alerta, a engine mostra no balao uma das
+  `game.brokenLines`, escolhida por `remarkOn + id`
 - furia (`enraged`): inimigo vivo que ve um colega morto (`canSee` no corpo)
   fica mais esperto ate morrer (`witness`): `intelligence` propria (copia;
   o perfil do nivel nao muda) com escuta, perseguicao e salto multiplicados

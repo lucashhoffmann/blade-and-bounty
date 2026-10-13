@@ -2202,6 +2202,9 @@ export function createWorldRenderer(
       ear,
       rage,
       enraged: false,
+      noticed: [],
+      remark: 0,
+      remarkOn: 0,
       bubble: null,
       said: '',
       cone,
@@ -2346,6 +2349,14 @@ export function createWorldRenderer(
     // pausa no fim de cada turno, antes de o outro responder
     if (!mine || beat - turn > 0.75) return null;
     return TALK_LINES[(turn + enemy.id) % TALK_LINES.length];
+  }
+
+  // Reparou num objeto quebrado (`Enemy.remark`, da simulacao): comenta. A
+  // fala sai do objeto e de quem viu, entao dois inimigos nao repetem a mesma
+  function remark(enemy: Enemy): string | null {
+    if (enemy.remark <= 0 || enemy.state === 'alert') return null;
+    const lines = getTexts().game.brokenLines;
+    return lines[(enemy.remarkOn + enemy.id) % lines.length];
   }
 
   // Perseguicao: quem esta em alerta grita de vez em quando. Cada inimigo tem
@@ -2505,6 +2516,9 @@ export function createWorldRenderer(
     const view: PlayerView = {
       rage,
       enraged: false,
+      noticed: [],
+      remark: 0,
+      remarkOn: 0,
       jumper,
       held: createHeldGuns(jumper.character, look.weapon),
       flash,
@@ -3082,7 +3096,11 @@ export function createWorldRenderer(
         }
         say(
           view,
-          dead ? null : (chatter(world, enemy, time) ?? taunt(enemy, time)),
+          dead
+            ? null
+            : (remark(enemy) ??
+                chatter(world, enemy, time) ??
+                taunt(enemy, time)),
           time,
         );
         view.rage.visible = furious;

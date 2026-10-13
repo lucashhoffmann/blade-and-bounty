@@ -392,43 +392,98 @@ Duas regras sustentam o resto:
 
 ### Como a pose vira clipe
 
-`driveClips(set, pose, deadFor, duration)` devolve a lista de clipes ativos;
-o que nao esta na lista fica com peso 0.
+`driveClips(set, pose, deadFor, duration, split)` devolve a lista de clipes
+ativos; o que nao esta na lista fica com peso 0. Primeiro o que toma o corpo
+inteiro, uma coisa de cada vez, nesta ordem:
 
-| Pose                      | Clipes                                                                |
-| ------------------------- | --------------------------------------------------------------------- |
-| `dead`                    | `death`, uma vez, travado no fim                                      |
-| `attack` (com `spinning`) | `spin`, se o esqueleto tem; senao o golpe da vez                      |
-| `attack`                  | `attacks[swing % n]`, no ponto da fase                                |
-| `dash`                    | `dash`                                                                |
-| `shot`                    | `shot` no tronco; nas pernas, os ciclos                               |
-| nada disso                | `idle` e `move` misturados por `moving`; agachado, `crouch` e `sneak` |
+| Pose       | Clipe                                                        |
+| ---------- | ------------------------------------------------------------ |
+| `dead`     | `death` (variacao do personagem), uma vez, travado no fim    |
+| `emote`    | `emotes[nome]` (comemorar na loja)                           |
+| `taunt`    | `taunt` (grito do chefe ao despertar)                        |
+| `attack`   | um golpe do estilo da arma; com `spinning`, o giro do estilo |
+| `throwing` | `throw` (adaga do cavaleiro)                                 |
+| `dash`     | `dash`                                                       |
 
-Prioridade: morte, golpe, salto, tiro. Acao sem clipe no `ClipSet` nao trava
-o corpo: seguem os ciclos.
+Nada disso: o **passo**, e por cima dele, so no tronco, o que estiver
+acontecendo com as maos.
 
-**Tiro so no tronco.** Quem esta de arma na mao passa o tempo todo com `shot`
-ligado (apontando). Se o clipe de tiro tomasse o corpo inteiro, as pernas
-parariam: o personagem deslizaria duro. Por isso o `RigSpec` lista os ossos
-da cintura para baixo (`lower`), e a view cria duas versoes de cada clipe
-envolvido: o de tiro so com as curvas do tronco, os ciclos so com as das
-pernas. Com `shot` ligado, `driveClips` devolve os ciclos na parte `lower` e
-o tiro na parte `upper`: o tronco aponta e as pernas andam, correm ou ficam
-paradas conforme `moving`. Sem `lower` no esqueleto, o tiro volta a tomar o
-corpo inteiro.
+- **passo**: parado, andando e correndo. Ate metade de `moving`, parado
+  mistura com andando; dai em diante, andando com correndo. Agachado usa
+  `crouch` e `sneak`
+- **por cima**, nesta ordem: reacao a golpe levado (`hits`, ou `block` se o
+  escudo segurou), disparo (`shot`), mira (`aim`, em ciclo)
+
+**Variacao.** `idle`, `walk`, `move`, `death` e `hits` aceitam varios clipes.
+Cada personagem pega um pelo `pose.variant` (o `id` dele): dois cavaleiros
+lado a lado nao andam no mesmo passo.
+
+**Estilo de arma** (`pose.style`). Troca o conjunto de golpes
+(`attackStyles`), o giro (`spinStyles`) e a mira e o disparo (`aimStyles`,
+`shotStyles`). Estilo que o esqueleto nao tem cai no padrao. No
+`KAYKIT_MEDIUM`:
+
+| Estilo     | Usado por                            | O que muda                                  |
+| ---------- | ------------------------------------ | ------------------------------------------- |
+| (nenhum)   | espada, lamina de osso               | cortes de uma mao; mira de uma mao          |
+| `stab`     | adaga, varinha                       | estocada; golpe de salto vira talho pulando |
+| `chop`     | machado, machado de osso, o chefe    | talho; golpe de salto vira talho pulando    |
+| `two`      | montante, machado de guerra, cajados | golpes de duas maos                         |
+| `bow`      | arco, arco de metal, o arqueiro      | arco na mao esquerda; puxa e solta          |
+| `crossbow` | besta, o barbaro                     | mira e disparo de duas maos                 |
+
+O estilo de corpo a corpo vem da skin de arma (`BLADE_STYLES`); o de
+alcance, da arma comprada na partida (`RANGED_STYLES`). So animacao: o golpe
+e o tiro sao sempre os mesmos na simulacao.
+
+**Tronco e pernas.** Com `RigSpec.lower` (os ossos da cintura para baixo), a
+view cria duas versoes dos clipes envolvidos: mira, disparo e reacao a golpe
+so com as curvas do tronco; os de passo, so com as das pernas. E o que deixa
+o personagem correr de arma apontada, ou estremecer sem parar de andar. Sem
+`lower`, o disparo e a reacao tomam o corpo inteiro e a mira nao aparece.
+
+**Onde a arma de alcance encaixa** (`RigSpec.grips`). Cada estilo diz em que
+ponto do corpo a arma fica e para onde apontam a frente e o topo dela,
+medido na pose de mira. No KayKit o arco vai na mao esquerda (a direita puxa
+a corda) e a besta na direita, virada para a mira de duas maos.
+`makeGrip`, em `world.renderer.ts`, monta o encaixe.
 
 **Cambalhota no salto.** O KayKit nao tem clipe de rolamento, entao o giro e
 conta: com `RigSpec.roll` (`{ turns, height, pivot }`), a view gira o corpo
 inteiro para frente em torno de `pivot` (o centro do corpo) e o ergue
 `height` no meio do caminho, tudo pela fase de `dash`. O clipe `dash` so da a
-forma do corpo durante o giro: no `KAYKIT_MEDIUM` e um quadro parado de
-`Crouching`, encolhido. Esqueleto com clipe de rolamento proprio usa o clipe
-e deixa `roll` de fora.
+forma do corpo durante o giro.
 
-Cada clipe e um `ClipRef` `{ name, from?, to? }`. `from` e `to` cortam o
-trecho usado (fracao de 0 a 1): os golpes do KayKit duram mais de 1 s, com
-preparo e volta longos, e o golpe do jogo dura `SLASH_TIME` (0.36 s). O
-`KAYKIT_MEDIUM` usa so o miolo de cada um.
+**O que a view marca sozinha.** A simulacao nao tem "tempo de estremecer"
+nem "grito do chefe". O renderer nota a vida cair (`MODEL_HIT_TIME`) e o
+chefe entrar em alerta (`MODEL_TAUNT_TIME`) e conta o tempo ele mesmo. E so
+desenho: nada disso volta para a simulacao.
+
+**Esqueletos.** `KAYKIT_SKELETON` e o mesmo esqueleto com o jeito proprio de
+ficar parado, andar e desabar, e o grito de desafio. Todo modelo de
+esqueleto (inimigo, chefe, skin) usa.
+
+### Clipes do pacote: o que entrou e o que nao
+
+O KayKit Character Animations tem 161 clipes. Entraram 37, os que tem alguma
+coisa no jogo para mostrar:
+
+| Grupo         | Entraram                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| parado, passo | `Idle_A/B`, `Walking_A/B/C`, `Running_A/B`, `Crouching`, `Sneaking`                                   |
+| corpo a corpo | os cinco golpes de uma mao (com o talho pulando), quatro de duas maos (com o giro), `Melee_Block_Hit` |
+| alcance       | mira e disparo de uma mao, de duas maos e de arco                                                     |
+| reacoes       | `Hit_A/B`, `Death_A/B`, `Throw`, `Dodge_Forward`                                                      |
+| gestos        | `Cheering`, `Waving`                                                                                  |
+| esqueletos    | `Skeletons_Idle`, `Skeletons_Walking`, `Skeletons_Death`, `Skeletons_Taunt`                           |
+
+Ficaram de fora, por nao haver acao no jogo que os use: ferramentas (cortar
+lenha, cavar, pescar, martelar, serrar, abrir fechadura), sentar e deitar,
+flexoes, magia, pulo, escudo erguido, duas armas, soco e chute, andar de
+costas e de lado, recarregar, e as variacoes de "surgir" e "despertar". Cada
+clipe a mais pesa cerca de 20 KB no arquivo que todo jogador baixa; os 37
+somam 868 KB. Para usar mais um: nome em `CLIPS` no script, rodar, e apontar
+no `ClipSet`.
 
 ### Quem usa que modelo
 
@@ -522,7 +577,7 @@ Player, alem disso:
 
 | Arquivo                                              | O que e                          | Tamanho |
 | ---------------------------------------------------- | -------------------------------- | ------- |
-| `medium.anims.glb`                                   | esqueleto + 16 clipes, sem malha | 334 KB  |
+| `medium.anims.glb`                                   | esqueleto + 37 clipes, sem malha | 868 KB  |
 | `rogue-hooded.glb`                                   | player                           | 372 KB  |
 | `knight.glb`                                         | `knight`                         | 334 KB  |
 | `ranger.glb`                                         | `archer`                         | 473 KB  |

@@ -93,18 +93,21 @@ export function LegendDialog({
           >
             {t.legend.home}
           </button>
-          <button
-            type='button'
-            className={cn(CHUNKY, SMALL, 'bg-[var(--game-neutralButton)]')}
-            // entra ou sai da tela cheia; navegador sem suporte ignora
-            onClick={() =>
-              document.fullscreenElement
-                ? document.exitFullscreen?.()
-                : document.documentElement.requestFullscreen?.()
-            }
-          >
-            {t.legend.fullscreen}
-          </button>
+          {/* no celular ninguem usa: so com teclado e mouse */}
+          {!touch && (
+            <button
+              type='button'
+              className={cn(CHUNKY, SMALL, 'bg-[var(--game-neutralButton)]')}
+              // entra ou sai da tela cheia; navegador sem suporte ignora
+              onClick={() =>
+                document.fullscreenElement
+                  ? document.exitFullscreen?.()
+                  : document.documentElement.requestFullscreen?.()
+              }
+            >
+              {t.legend.fullscreen}
+            </button>
+          )}
           {onRestart && (
             <button
               type='button'

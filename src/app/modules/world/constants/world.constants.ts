@@ -295,6 +295,11 @@ export const HEAR_PER_ROOM = 0.05;
 export const HEAR_MAX_BONUS = 0.5;
 // quanto tempo investiga o barulho antes de voltar a patrulha
 export const SEARCH_TIME = 4;
+// Objeto quebrado a vista (notice, em enemy.system): PROP_IGNORE_CHANCE das
+// vezes o inimigo nem repara; senao comenta (balao por PROP_REMARK_TIME
+// segundos) e vai ate la conferir, como faz com barulho
+export const PROP_IGNORE_CHANCE = 0.35;
+export const PROP_REMARK_TIME = 2.5;
 
 // Inimigo morto: chance de sortear um item na mesma tabela das caixas (alem
 // do dinheiro, que cai sempre). 0 = nunca solta item; 1 = sempre sorteia.

@@ -1,3 +1,4 @@
+import { breakProp } from '@/app/modules/level/utils/grid.util';
 import { spawnProjectile } from '@/app/modules/combat/systems/combat.system';
 import {
   createEnemy,
@@ -12,6 +13,8 @@ import {
   ENEMY_CRIT_MULT,
   ENEMY_DAMAGE_SHARE_MAX,
   FIXED_DT,
+  PROP_IGNORE_CHANCE,
+  PROP_REMARK_TIME,
   KNIGHT_DAMAGE,
   PACK_CALL_RADIUS,
   PLAYER_ARROW_SPEED,
@@ -288,6 +291,57 @@ describe('critico do inimigo', () => {
     expect(arrows.find((b) => b.critical)!.damage).toBe(
       Math.round(base * ENEMY_CRIT_MULT),
     );
+  });
+});
+
+describe('objeto quebrado a vista', () => {
+  // inimigo em (3.5, 9.5) olhando para a direita; caixa na frente dele
+  function scene(seed: number, broken = true) {
+    const world = createArenaWorld({ 3: '#.....o...#' });
+    world.player.pos = { x: 5.5, y: 1.5 };
+    const enemy = addEnemy(world, 3.5, 9.5, 0);
+    const [crate] = world.props;
+    if (broken) breakProp(world, crate);
+    world.rngState = seed;
+    return { world, enemy, crate };
+  }
+
+  it('chama a atencao na maioria das vezes: comenta e vai conferir; as vezes passa batido', () => {
+    let went = 0;
+    const seeds = 300;
+    for (let seed = 1; seed <= seeds; seed++) {
+      const { world, enemy, crate } = scene(seed);
+      updateEnemies(world, FIXED_DT);
+      expect(enemy.noticed).toEqual([crate.id]);
+      if (!enemy.heard) {
+        expect(enemy.remark).toBe(0);
+        expect(enemy.state).toBe('patrol');
+        continue;
+      }
+      went++;
+      expect(enemy.heard).toEqual(crate.pos);
+      expect(enemy.remark).toBe(PROP_REMARK_TIME);
+      expect(enemy.remarkOn).toBe(crate.id);
+      expect(enemy.state).toBe('suspicious');
+    }
+    expect(went / seeds).toBeGreaterThan(1 - PROP_IGNORE_CHANCE - 0.1);
+    expect(went / seeds).toBeLessThan(1 - PROP_IGNORE_CHANCE + 0.1);
+  });
+
+  it('cada objeto so e avaliado uma vez; inteiro, nao chama atencao', () => {
+    const { world, enemy } = scene(1);
+    updateEnemies(world, FIXED_DT);
+    const after = world.rngState;
+    enemy.heard = null;
+    enemy.remark = 0;
+    updateEnemies(world, FIXED_DT);
+    expect(world.rngState).toBe(after);
+    expect(enemy.heard).toBeNull();
+
+    const whole = scene(1, false);
+    updateEnemies(whole.world, FIXED_DT);
+    expect(whole.enemy.noticed).toEqual([]);
+    expect(whole.enemy.heard).toBeNull();
   });
 });
 

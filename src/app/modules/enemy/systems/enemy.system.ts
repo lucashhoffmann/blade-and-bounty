@@ -76,6 +76,8 @@ import {
   KNIGHT_LUNGE_STRIKE,
   KNIGHT_REACH,
   REPATH_INTERVAL,
+  PROP_IGNORE_CHANCE,
+  PROP_REMARK_TIME,
   SEARCH_TIME,
   DAGGER_DAMAGE,
   DAGGER_FIRST,
@@ -170,6 +172,9 @@ export function createEnemy(
     hearing: 0,
     heard: null,
     searchTimer: 0,
+    noticed: [],
+    remark: 0,
+    remarkOn: 0,
     launch: 0,
     throwCooldown: 0,
     evading: false,
@@ -353,6 +358,31 @@ function witness(world: World, enemy: Enemy): void {
   enemy.searchTimer = SEARCH_TIME * enemy.intelligence.hearing;
   enemy.route = [];
   enemy.repathTimer = 0;
+}
+
+// Viu um objeto quebrado da sala que ainda nao conhecia. As vezes nem repara
+// (PROP_IGNORE_CHANCE); senao comenta e vai ate la conferir, como faz com
+// barulho. Cada objeto so e avaliado uma vez por inimigo.
+function notice(world: World, enemy: Enemy): void {
+  for (const prop of world.props) {
+    if (
+      !prop.broken ||
+      prop.roomIndex !== enemy.roomIndex ||
+      enemy.noticed.includes(prop.id) ||
+      !canSee(world, enemy, prop.pos)
+    ) {
+      continue;
+    }
+    enemy.noticed.push(prop.id);
+    if (nextRandom(world) < PROP_IGNORE_CHANCE) continue;
+    enemy.remark = PROP_REMARK_TIME;
+    enemy.remarkOn = prop.id;
+    enemy.heard = { ...prop.pos };
+    enemy.searchTimer = SEARCH_TIME * enemy.intelligence.hearing;
+    enemy.route = [];
+    enemy.repathTimer = 0;
+    return;
+  }
 }
 
 // Quem entrou em alerta chama os colegas por perto: entram em alerta no
@@ -698,6 +728,7 @@ export function updateEnemies(world: World, dt: number): void {
     world.player = nearestPlayer(world, enemy.pos) ?? focus;
     witness(world, enemy);
     enemy.attack = Math.max(0, enemy.attack - dt);
+    enemy.remark = Math.max(0, enemy.remark - dt);
     // detection cheia vem de ver o player ou de levar tiro (damageEnemy)
     if (enemy.state !== 'alert' && enemy.detection >= 1) {
       enterAlert(enemy);
@@ -726,6 +757,8 @@ export function updateEnemies(world: World, dt: number): void {
       enemy.state = 'suspicious';
       continue;
     }
+    // calmo e sem nada a conferir: repara no que esta quebrado
+    if (!enemy.heard) notice(world, enemy);
     if (enemy.heard) {
       enemy.state = 'suspicious';
       investigate(world, enemy, enemy.heard, dt);

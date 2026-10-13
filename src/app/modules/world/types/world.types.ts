@@ -114,6 +114,13 @@ export type Enemy = {
   heard: Vec2 | null;
   // segundos restantes da investigacao
   searchTimer: number;
+  // objetos quebrados (`Prop.id`) que ja viu: cada um so chama atencao (ou
+  // passa batido) uma vez
+  noticed: number[];
+  // segundos restantes do comentario sobre o ultimo objeto quebrado que
+  // reparou, e qual foi (a engine escolhe a fala por ele)
+  remark: number;
+  remarkOn: number;
 };
 
 export type Projectile = {
