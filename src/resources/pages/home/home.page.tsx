@@ -1,6 +1,9 @@
 import { Play, Settings, Store, Trophy, Users } from 'lucide-react';
 
-import { useGameStore } from '@/app/store/game-store/game.store';
+import {
+  GRAPHICS_QUALITIES,
+  useGameStore,
+} from '@/app/store/game-store/game.store';
 import { useHomePage } from '@/resources/pages/home/use-home.page';
 import {
   Dialog,
@@ -30,6 +33,8 @@ export function HomePage() {
   const { online } = useHomePage();
   const bloodColor = useGameStore((state) => state.bloodColor);
   const setBloodColor = useGameStore((state) => state.setBloodColor);
+  const graphics = useGameStore((state) => state.graphics);
+  const setGraphics = useGameStore((state) => state.setGraphics);
 
   // Rola quando o conteudo nao cabe (celular deitado, muitos botoes). O centro
   // vem das margens automaticas do titulo e do rodape: sobrando espaco,
@@ -162,6 +167,49 @@ export function HomePage() {
                 className='h-10 w-14 cursor-pointer bg-transparent'
               />
             </label>
+            <fieldset className='flex flex-col gap-2 border-t pt-4'>
+              <legend className='font-semibold'>{t.home.graphics}</legend>
+              <div
+                role='radiogroup'
+                aria-label={t.home.graphics}
+                className='grid grid-cols-3 gap-2'
+              >
+                {GRAPHICS_QUALITIES.map((quality) => (
+                  <button
+                    key={quality}
+                    type='button'
+                    role='radio'
+                    aria-checked={graphics.quality === quality}
+                    onClick={() => setGraphics({ quality })}
+                    className='cursor-pointer rounded-md border px-3 py-2 text-sm aria-checked:border-transparent aria-checked:bg-[var(--game-secondary)] aria-checked:text-white'
+                  >
+                    {t.home.graphicsQuality[quality]}
+                  </button>
+                ))}
+              </div>
+              <p className='text-muted-foreground text-xs'>
+                {t.home.graphicsHint}
+              </p>
+              <label className='flex items-center justify-between gap-4 pt-2'>
+                <span>
+                  {t.home.blur}
+                  <span className='text-muted-foreground block text-xs'>
+                    {t.home.blurHint}
+                  </span>
+                </span>
+                <input
+                  type='checkbox'
+                  checked={graphics.blur}
+                  onChange={(event) =>
+                    setGraphics({ blur: event.target.checked })
+                  }
+                  className='size-5 cursor-pointer'
+                />
+              </label>
+              <p className='text-muted-foreground text-xs'>
+                {t.home.graphicsNote}
+              </p>
+            </fieldset>
           </DialogContent>
         </Dialog>
         <button

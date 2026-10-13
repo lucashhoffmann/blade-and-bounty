@@ -59,6 +59,26 @@ describe('HomePage', () => {
     expect(useGameStore.getState().bloodColor).toBe('#22aa44');
   });
 
+  it('configuracoes: escolhe a qualidade dos graficos e liga ou desliga o desfoque', async () => {
+    useGameStore.setState({ graphics: { quality: 'high', blur: true } });
+    render(<HomePage />);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Configurações' }),
+    );
+    expect(screen.getByRole('radio', { name: 'Alto' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: 'Baixo' }));
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: /Desfoque de movimento/ }),
+    );
+    expect(useGameStore.getState().graphics).toEqual({
+      quality: 'low',
+      blur: false,
+    });
+    // valor invalido nao entra
+    useGameStore.getState().setGraphics({ quality: 'ultra' as never });
+    expect(useGameStore.getState().graphics.quality).toBe('low');
+  });
+
   it('troca o idioma e atualiza os textos da tela', async () => {
     render(<HomePage />);
     const toggle = screen.getByRole('button', { name: 'Trocar para inglês' });

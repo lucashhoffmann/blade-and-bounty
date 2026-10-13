@@ -6,6 +6,7 @@ import { loadCharacterView } from '@/app/engine/characters/character-model.loade
 import {
   PLAYER_OUTFITS,
   playerModel,
+  RANGED_STYLES,
 } from '@/app/engine/characters/character-models.config';
 import type {
   CharacterPose,
@@ -39,8 +40,8 @@ const REST: CharacterPose = {
   spinning: false,
   dead: false,
 };
-// ponto do clipe de tiro em que a arma ja esta apontada
-const AIM = 0.5;
+// trocou de skin ou de arma: o personagem comemora uma vez
+const CHEER_TIME = 1.6;
 
 export function createCharacterPreview(
   canvas: HTMLCanvasElement,
@@ -90,6 +91,7 @@ export function createCharacterPreview(
   let gun: WeaponModel | null = null;
   let weapon: WeaponId | null = null;
   let disposed = false;
+  let cheer = 0;
 
   // troca o que esta na mao do modelo atual
   const hold = () => {
@@ -114,8 +116,19 @@ export function createCharacterPreview(
   let last = performance.now();
   let frame = requestAnimationFrame(function loop(now) {
     frame = requestAnimationFrame(loop);
-    body?.pose({ ...REST, shot: weapon ? AIM : null }, (now - last) / 1000);
+    const dt = (now - last) / 1000;
     last = now;
+    cheer = Math.max(0, cheer - dt);
+    body?.pose(
+      {
+        ...REST,
+        aiming: !!weapon,
+        style: weapon ? RANGED_STYLES[weapon] : look && playerModel(look).style,
+        emote:
+          cheer > 0 ? { name: 'cheer', phase: 1 - cheer / CHEER_TIME } : null,
+      },
+      dt,
+    );
     renderer.render(scene, camera);
   });
 
@@ -135,6 +148,8 @@ export function createCharacterPreview(
           }
           gun?.dispose();
           gun = null;
+          // nao na primeira vez: so quando ele troca de visual
+          if (body) cheer = CHEER_TIME;
           body?.dispose();
           body = view;
           blade = view.slot('rightHand')?.children[0] ?? null;

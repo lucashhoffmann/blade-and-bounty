@@ -190,6 +190,31 @@ export const DEFAULT_BLOOD_COLOR = COLORS.ui.bloodDefault;
 
 const COLOR = /^#[0-9a-f]{6}$/i;
 
+// Graficos, escolhidos nas configuracoes da home. `quality` muda quantos
+// pixels a engine desenha (e o serrilhado, no baixo); `blur` liga o desfoque
+// de salto, golpe e perseguicao.
+export type GraphicsQuality = 'high' | 'medium' | 'low';
+export type Graphics = { quality: GraphicsQuality; blur: boolean };
+export const GRAPHICS_QUALITIES: GraphicsQuality[] = ['high', 'medium', 'low'];
+// celular comeca no medio: tela densa, GPU mais fraca
+export const DEFAULT_GRAPHICS: Graphics = {
+  quality:
+    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+      ? 'medium'
+      : 'high',
+  blur: true,
+};
+// valor salvo ou vindo da tela: so entra o que e valido
+function mergeGraphics(current: Graphics, patch: unknown): Graphics {
+  const { quality, blur } = (patch ?? {}) as Partial<Graphics>;
+  return {
+    quality: GRAPHICS_QUALITIES.includes(quality as GraphicsQuality)
+      ? (quality as GraphicsQuality)
+      : current.quality,
+    blur: typeof blur === 'boolean' ? blur : current.blur,
+  };
+}
+
 function validIntelligence(saved: unknown): Record<number, EnemyIntelligence> {
   const levels: Record<number, EnemyIntelligence> = {};
   if (!saved || typeof saved !== 'object' || Array.isArray(saved))
@@ -281,6 +306,7 @@ type GameStore = {
   buyBlade: (id: BladeId) => boolean;
   look: PlayerLook;
   bloodColor: string;
+  graphics: Graphics;
   idleWarnings: number;
   // placar da partida, um por jogador
   scores: Score[];
@@ -311,6 +337,7 @@ type GameStore = {
   attackVariance: AttackVariance | null;
   setLook: (patch: Partial<PlayerLook>) => void;
   setBloodColor: (color: string) => void;
+  setGraphics: (patch: Partial<Graphics>) => void;
   openCharacter: () => void;
   openLobby: () => void;
   // partida multiplayer: `seats[i]` vira `world.players[i]`
@@ -555,6 +582,7 @@ export const useGameStore = create<GameStore>()(
         },
         look: DEFAULT_LOOK,
         bloodColor: DEFAULT_BLOOD_COLOR,
+        graphics: DEFAULT_GRAPHICS,
         idleWarnings: 0,
         scores: [],
         scoreboard: false,
@@ -616,6 +644,10 @@ export const useGameStore = create<GameStore>()(
         },
         setBloodColor: (color) => {
           if (COLOR.test(color)) set({ bloodColor: color });
+        },
+        // a engine le ao criar o renderer: vale a partir da proxima partida
+        setGraphics: (patch) => {
+          set({ graphics: mergeGraphics(get().graphics, patch) });
         },
         openCharacter: () => {
           if (!world) set({ screen: 'character' });
@@ -776,13 +808,21 @@ export const useGameStore = create<GameStore>()(
         wallet: saveWallet(),
         look: state.look,
         bloodColor: state.bloodColor,
+        graphics: state.graphics,
         intelligence: state.intelligence,
         attackVariance: state.attackVariance,
       }),
       // valor salvo passa pela mesma validacao de `setLook`
       merge: (saved, current) => {
-        const { best, look, bloodColor, intelligence, attackVariance, wallet } =
-          (saved ?? {}) as Partial<GameStore> & { wallet?: unknown };
+        const {
+          best,
+          look,
+          bloodColor,
+          graphics,
+          intelligence,
+          attackVariance,
+          wallet,
+        } = (saved ?? {}) as Partial<GameStore> & { wallet?: unknown };
         return {
           ...current,
           // antes do look: `mergeLook` so aceita skin que a carteira tem
@@ -793,6 +833,7 @@ export const useGameStore = create<GameStore>()(
             typeof bloodColor === 'string' && COLOR.test(bloodColor)
               ? bloodColor
               : current.bloodColor,
+          graphics: mergeGraphics(current.graphics, graphics),
           intelligence: validIntelligence(intelligence),
           attackVariance: validAttackVariance(attackVariance),
         };

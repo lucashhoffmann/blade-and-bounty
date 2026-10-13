@@ -2211,7 +2211,8 @@ export function createWorldRenderer(
       body: null,
       removed: false,
       style: '',
-      lastHp: Infinity,
+      // 0: o primeiro quadro so anota a vida, nao conta como golpe
+      lastHp: 0,
       lastState: 'patrol',
       hitLeft: 0,
       tauntLeft: 0,
@@ -2515,8 +2516,9 @@ export function createWorldRenderer(
       body: null,
       pending: true,
       grips: {},
-      lastHealth: Infinity,
-      lastHp: Infinity,
+      // 0: o primeiro quadro so anota a vida, nao conta como golpe
+      lastHealth: 0,
+      lastHp: 0,
       hitLeft: 0,
       blocked: false,
       blade: null,

@@ -794,6 +794,9 @@ market: Market;
 best: number; // maior sala alcancada, persistido em localStorage
 look: PlayerLook; // aparencia do player, persistida em localStorage
 bloodColor: string; // cor das pocas, persistida em localStorage
+// graficos, persistidos: quality 'high' | 'medium' | 'low', blur boolean
+graphics: Graphics;
+setGraphics: (patch: Partial<Graphics>) => void;
 idleWarnings: number; // pulsos azuis da run atual, nao persistido
 intelligence: Record<number, EnemyIntelligence>; // perfis por nivel, persistidos em localStorage
 attackVariance: AttackVariance | null; // faixa de dano, persistida em localStorage
@@ -815,6 +818,12 @@ type PlayerLook = {
 `look` e so visual: nao entra no `World` nem muda colisao. A engine le uma vez,
 ao criar o renderer; por isso `setLook` so vale antes da run (telas `menu` e
 `character`).
+`graphics` tambem vem das configuracoes da home e a engine le uma vez, ao
+criar o renderer (vale a partir da proxima partida). `quality` e o teto de
+pixels por ponto da tela (`high` 2, `medium` 1.5, `low` 1; no `low` tambem
+sem antialias); `blur` liga o desfoque de CSS do canvas (salto, golpe,
+perseguicao). Padrao: `high` no computador, `medium` em aparelho de toque,
+`blur` ligado. `setGraphics` ignora valor invalido.
 `bloodColor` e uma cor `#rrggbb` escolhida nas configuracoes da home. O
 renderer a le ao abrir a run; a poca sob cada inimigo morto cresce suavemente
 por `BLOOD_GROW_TIME` segundos ate um tamanho fixo.

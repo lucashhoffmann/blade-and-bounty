@@ -25,10 +25,21 @@ vi.mock('@/app/engine/characters/character-models.config', () => {
   const model = (url: string) => ({
     url,
     clipsUrl: 'clips',
-    rig: { scale: 0.5, turn: 0, slots: {}, clips: {} },
+    rig: {
+      scale: 0.5,
+      turn: 0,
+      slots: {},
+      clips: {},
+      // arma de alcance: tudo na mao direita, menos o arco
+      grips: {
+        '': { slot: 'rightHand', forward: [1, 0, 0], up: [0, 1, 0] },
+        bow: { slot: 'leftHand', forward: [1, 0, 0], up: [0, 1, 0] },
+      },
+    },
   });
   return {
     playerModel: () => model('hero'),
+    RANGED_STYLES: { bow: 'bow', metalBow: 'bow', crossbow: 'crossbow' },
     ENEMY_MODELS: {
       knight: [model('knight')],
       archer: [model('archer')],
@@ -78,6 +89,15 @@ function setup(kind: EnemyKind = 'knight') {
   );
   return { foe, hero, world, enemy, scene, renderer };
 }
+// O renderer anda no maximo 0.1 s por quadro: deixa passar 2 s, em quadros,
+// a partir de `from`, para os tempos que ele marca sozinho acabarem.
+function settle(
+  renderer: ReturnType<typeof createWorldRenderer>,
+  world: Parameters<ReturnType<typeof createWorldRenderer>['sync']>[0],
+  from: number,
+) {
+  for (let i = 1; i <= 20; i++) renderer.sync(world, from + i * 0.1);
+}
 const lastPose = (body: ReturnType<typeof fakeBody>) =>
   body.pose.mock.calls.at(-1)![0];
 // o corpo de pecas e o grupo cheio de filhos dentro do root
@@ -108,7 +128,7 @@ describe('inimigo com corpo de modelo', () => {
     renderer.dispose();
   });
 
-  it('quem golpeia recebe a fase do golpe que vem da simulacao', async () => {
+  it('quem golpeia recebe a fase do golpe; de longe, o golpe e arremesso', async () => {
     const { foe, world, enemy, renderer } = setup('knight');
     renderer.sync(world, 1);
     await arrive();
@@ -116,32 +136,71 @@ describe('inimigo com corpo de modelo', () => {
     renderer.sync(world, 1.1);
     expect(lastPose(foe)).toMatchObject({ attack: null, shot: null });
 
+    // colado no player: golpe
+    world.player.pos = { x: 5.5, y: 7.6 };
     enemy.attack = SLASH_TIME / 4;
     renderer.sync(world, 1.2);
     expect(lastPose(foe).attack).toBeCloseTo(0.75);
+    expect(lastPose(foe).throwing).toBeNull();
     expect(lastPose(foe).shot).toBeNull();
+
+    // longe: a mesma fase vira arremesso
+    world.player.pos = { x: 5.5, y: 2.5 };
+    renderer.sync(world, 1.3);
+    expect(lastPose(foe).attack).toBeNull();
+    expect(lastPose(foe).throwing).toBeCloseTo(0.75);
     renderer.dispose();
   });
 
-  it('quem atira ganha a arma na mao, aponta em alerta e dispara pelo clipe de tiro', async () => {
+  it('cada inimigo leva o proprio numero, para variar a animacao; levar golpe estremece', async () => {
+    const { foe, world, enemy, renderer } = setup('knight');
+    renderer.sync(world, 1);
+    await arrive();
+    renderer.sync(world, 1.1);
+    expect(lastPose(foe).variant).toBe(enemy.id);
+    expect(lastPose(foe).hit).toBeNull();
+
+    enemy.hp -= 10;
+    renderer.sync(world, 1.2);
+    expect(lastPose(foe).hit).toBeGreaterThanOrEqual(0);
+    // passa sozinho
+    settle(renderer, world, 1.2);
+    expect(lastPose(foe).hit).toBeNull();
+    renderer.dispose();
+  });
+
+  it('quem atira ganha a arma no encaixe, aponta em alerta e dispara pela fase', async () => {
     const { foe, world, enemy, renderer } = setup('archer');
     renderer.sync(world, 1);
     await arrive();
-    // a espada de mentira mais a arma de alcance do jogo
+    // a espada de mentira mais o encaixe com a arma de alcance do jogo
     expect(foe.hand.children).toHaveLength(2);
 
     renderer.sync(world, 1.1);
-    expect(lastPose(foe).shot).toBeNull();
+    expect(lastPose(foe)).toMatchObject({ aiming: false, shot: null });
 
     enemy.state = 'alert';
     renderer.sync(world, 1.2);
-    const aiming = lastPose(foe).shot!;
-    expect(aiming).toBeGreaterThan(0);
+    expect(lastPose(foe)).toMatchObject({ aiming: true, shot: null });
 
     enemy.attack = SLASH_TIME / 2;
     renderer.sync(world, 1.3);
-    expect(lastPose(foe).shot!).toBeGreaterThan(aiming);
+    expect(lastPose(foe).shot).toBeCloseTo(0.5);
     expect(lastPose(foe).attack).toBeNull();
+    renderer.dispose();
+  });
+
+  it('chefe grita o desafio quando entra em alerta', async () => {
+    const { foe, world, enemy, renderer } = setup('boss');
+    renderer.sync(world, 1);
+    await arrive();
+    renderer.sync(world, 1.1);
+    expect(lastPose(foe).taunt).toBeNull();
+    enemy.state = 'alert';
+    renderer.sync(world, 1.2);
+    expect(lastPose(foe).taunt).toBeGreaterThanOrEqual(0);
+    settle(renderer, world, 1.2);
+    expect(lastPose(foe).taunt).toBeNull();
     renderer.dispose();
   });
 
@@ -255,19 +314,40 @@ describe('player com corpo de modelo', () => {
     renderer.dispose();
   });
 
-  it('com arma de alcance: a espada some, a arma vai para a mao do modelo e ele aponta', async () => {
+  it('com arma de alcance: a espada some, a arma vai para o encaixe do estilo e ele aponta', async () => {
     const { hero, world, renderer } = await ready();
     expect(hero.blade.visible).toBe(true);
-    expect(lastPose(hero).shot).toBeNull();
-    // o suporte das armas saiu do braco de pecas para a mao do modelo
+    expect(lastPose(hero)).toMatchObject({ aiming: false, shot: null });
+    // a espada e o encaixe da mao direita
     expect(hero.hand.children).toHaveLength(2);
 
-    const bow = { id: 'bow' as const, ammo: 5 };
-    world.player.arsenal = [bow];
-    world.player.weapon = bow;
+    const crossbow = { id: 'crossbow' as const, ammo: 5 };
+    world.player.arsenal = [crossbow];
+    world.player.weapon = crossbow;
     renderer.sync(world, 1.2);
     expect(hero.blade.visible).toBe(false);
-    expect(lastPose(hero).shot).toBeGreaterThan(0);
+    expect(lastPose(hero)).toMatchObject({
+      aiming: true,
+      shot: null,
+      style: 'crossbow',
+    });
+    renderer.dispose();
+  });
+
+  it('golpe levado estremece o corpo; se o escudo segurou, avisa', async () => {
+    const { hero, world, renderer } = await ready();
+    world.player.shield = 20;
+    renderer.sync(world, 1.2);
+    world.player.shield = 5;
+    renderer.sync(world, 1.3);
+    expect(lastPose(hero)).toMatchObject({ blocked: true });
+    expect(lastPose(hero).hit).toBeGreaterThanOrEqual(0);
+
+    settle(renderer, world, 1.3);
+    world.player.hp -= 10;
+    renderer.sync(world, 9);
+    expect(lastPose(hero)).toMatchObject({ blocked: false });
+    expect(lastPose(hero).hit).toBeGreaterThanOrEqual(0);
     renderer.dispose();
   });
 

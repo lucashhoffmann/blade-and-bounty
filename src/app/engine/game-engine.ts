@@ -19,8 +19,8 @@ import {
 const CAMERA_HEIGHT = 13;
 const CAMERA_BACK = 7;
 const MAX_FRAME_TIME = 0.1;
-// teto de pixels por ponto no celular; no computador e 2
-const MOBILE_PIXEL_RATIO = 1.5;
+// teto de pixels por ponto da tela, por qualidade dos graficos
+const PIXEL_RATIO = { high: 2, medium: 1.5, low: 1 };
 // quadro a menos disto de um numero inteiro de passos conta como inteiro
 const FRAME_SNAP = 0.15;
 const CAMERA_FOV = 45;
@@ -64,17 +64,16 @@ function axis(keys: Set<string>, positive: string[], negative: string[]) {
 }
 
 export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
-  // Celular: tela densa e GPU fraca. Menos pixels (o que mais pesa) e sem o
-  // desfoque de CSS no canvas, que la refaz a tela inteira a cada quadro
-  const touch =
-    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  // Graficos das configuracoes, lidos uma vez (como `look`): quantos pixels
+  // desenhar, o que mais pesa em celular, e se ha o desfoque de CSS no canvas
+  const { graphics } = useGameStore.getState();
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: graphics.quality !== 'low',
     powerPreference: 'high-performance',
   });
   renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, touch ? MOBILE_PIXEL_RATIO : 2),
+    Math.min(window.devicePixelRatio, PIXEL_RATIO[graphics.quality]),
   );
 
   const scene = new THREE.Scene();
@@ -292,7 +291,7 @@ export function createGameEngine(canvas: HTMLCanvasElement): GameEngine {
       clash * CLASH_BLUR,
       beat * CHASE_BEAT_BLUR,
     );
-    if (!touch) {
+    if (graphics.blur) {
       canvas.style.filter = blur > 0.05 ? `blur(${blur.toFixed(1)}px)` : '';
     }
 
