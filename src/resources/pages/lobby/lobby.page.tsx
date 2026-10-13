@@ -38,7 +38,7 @@ export function LobbyPage() {
     <main className='game-menu-background font-display relative flex h-full touch-pan-y flex-col items-center gap-5 overflow-y-auto p-6 pt-16 text-center'>
       <button
         type='button'
-        className={`${CHUNKY} absolute top-3 left-3 bg-[var(--game-secondary)] text-base`}
+        className={`${CHUNKY} absolute top-[max(0.75rem,env(safe-area-inset-top))] left-[max(0.75rem,env(safe-area-inset-left))] bg-[var(--game-secondary)] text-base`}
         onClick={exit}
       >
         <ArrowLeft

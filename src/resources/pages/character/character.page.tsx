@@ -67,7 +67,7 @@ export function CharacterPage() {
             mesmo quando o conteudo passa da altura da janela */}
         <Button
           size='lg'
-          className='fixed top-3 right-3 z-10 font-black uppercase shadow-lg md:sticky md:top-auto md:right-auto md:bottom-0 md:w-full md:max-w-xs md:shrink-0'
+          className='fixed top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] z-10 font-black uppercase shadow-lg md:sticky md:top-auto md:right-auto md:bottom-0 md:w-full md:max-w-xs md:shrink-0'
           onClick={backToMenu}
         >
           <ArrowLeft
