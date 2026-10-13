@@ -360,7 +360,6 @@ type GameStore = {
   tutorialDone: boolean;
   startTutorial: () => void;
   // some o guia e a run segue normal
-  finishTutorial: () => void;
   begin: () => void;
   togglePause: () => void;
   tick: (input: InputState, dt: number) => void;
@@ -740,7 +739,6 @@ export const useGameStore = create<GameStore>()(
           get().startRun(Date.now(), true);
           set({ tutorialDone: true });
         },
-        finishTutorial: () => set({ tutorial: false }),
         begin: () => {
           if (!world) return;
           beginRun(world);

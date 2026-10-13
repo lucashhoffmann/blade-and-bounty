@@ -14,7 +14,6 @@ export function useTutorialOverlay() {
   const active = useGameStore((state) => state.tutorial);
   const screen = useGameStore((state) => state.screen);
   const begin = useGameStore((state) => state.begin);
-  const finishTutorial = useGameStore((state) => state.finishTutorial);
   const backToMenu = useGameStore((state) => state.backToMenu);
   const startRun = useGameStore((state) => state.startRun);
   // o passo volta ao comeco toda vez que um tutorial (re)comeca
@@ -48,8 +47,9 @@ export function useTutorialOverlay() {
     touch,
     // boas-vindas solta a simulacao
     begin,
-    // pular: o guia some e a run (controlada) segue ate o jogador sair
-    skip: finishTutorial,
+    // pular: recomeca como run de verdade (so apagar o guia deixava o mundo
+    // em modo tutorial: sem morte e so sala vazia depois da arena, sem saida)
+    skip: () => startRun(),
     // fim: volta ao menu ou ja comeca uma run de verdade
     menu: backToMenu,
     play: () => startRun(),

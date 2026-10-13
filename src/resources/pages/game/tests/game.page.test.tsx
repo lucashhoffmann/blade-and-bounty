@@ -7,6 +7,7 @@ import {
   createMarket,
   refillPrice,
 } from '@/app/modules/shop/systems/shop.system';
+import { isTutorial } from '@/app/modules/world/constants/world.constants';
 import { createArenaWorld } from '@/test/world.fixture';
 import type { Hud as HudData } from '@/app/store/game-store/game.store';
 import { getWorld, useGameStore } from '@/app/store/game-store/game.store';
@@ -616,7 +617,7 @@ describe('GamePage', () => {
     expect(screen.getByText('Como jogar')).toBeInTheDocument();
   });
 
-  it('tutorial: troca a legenda pelo guia, Comecar solta o jogo e Pular encerra', async () => {
+  it('tutorial: troca a legenda pelo guia, Comecar solta o jogo e Pular recomeca uma run normal', async () => {
     act(() => useGameStore.getState().startTutorial());
     render(<GamePage />);
     expect(screen.queryByText('Como jogar')).not.toBeInTheDocument();
@@ -630,9 +631,13 @@ describe('GamePage', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Pular tutorial' }),
     );
+    // pular recomeca como run de verdade: so esconder o guia deixava o
+    // mundo em modo tutorial (sem morte, salas vazias) e o jogador preso
     expect(useGameStore.getState().tutorial).toBe(false);
+    expect(isTutorial()).toBe(false);
     expect(screen.queryByRole('dialog', { name: 'Tutorial' })).toBeNull();
-    expect(useGameStore.getState().screen).toBe('playing');
+    expect(useGameStore.getState().screen).toBe('intro');
+    expect(screen.getByText('Como jogar')).toBeInTheDocument();
   });
 
   it('tutorial: no fim, Play comeca uma run de verdade', async () => {
