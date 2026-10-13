@@ -1,0 +1,309 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+.game-menu-background {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    var(--game-homeGlow) 0%,
+    var(--game-background) 55%,
+    var(--game-homeDeep) 100%
+  );
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 2px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --animate-damage: damage 0.7s ease-out;
+  --animate-low-health: damage 1.1s ease-out infinite;
+  --animate-credit: credit-pulse 1.8s ease-in-out infinite;
+  --animate-hud-pop: hud-pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  --animate-hud-in: hud-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  --animate-streak: streak 1.9s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  --font-hit: 'MedievalSharp', 'Pirata One', Georgia, serif;
+  --font-display: 'Pirata One', 'Palatino Linotype', Georgia, serif;
+  /* texto corrido da interface */
+  --font-sans: 'Alegreya', 'Palatino Linotype', Georgia, serif;
+}
+
+/* dano: bate forte, pulsa uma vez e some */
+/* sequencia de mortes: despenca grande e torto, bate, treme e some subindo */
+@keyframes streak {
+  0% {
+    opacity: 0;
+    transform: scale(2.6) rotate(-9deg);
+  }
+  11% {
+    opacity: 1;
+    transform: scale(0.94) rotate(3deg);
+  }
+  17% {
+    transform: scale(1.1) rotate(-3deg);
+  }
+  23% {
+    transform: scale(1) rotate(2deg);
+  }
+  29% {
+    transform: scale(1.03) rotate(-2deg);
+  }
+  35%,
+  72% {
+    opacity: 1;
+    transform: scale(1) rotate(-2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-28px) rotate(-2deg);
+  }
+}
+
+/* HUD: valor que mudou estoura e assenta */
+@keyframes hud-pop {
+  0% {
+    transform: scale(1.45);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* HUD: entra descendo do topo da tela */
+@keyframes hud-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-60%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* credito do rodape: cresce e brilha de leve, sem parar */
+@keyframes credit-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.07);
+    filter: brightness(1.25);
+  }
+}
+
+@keyframes damage {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.45;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* spot da tela inicial: o facho balanca de leve em volta do refletor */
+@keyframes spotlight-sway {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-9deg);
+  }
+  50% {
+    transform: translateX(-50%) rotate(9deg);
+  }
+}
+
+/* lampada falhando: quase o tempo todo acesa, com piscadas curtas e
+   irregulares e um apagao mais longo por ciclo */
+@keyframes spotlight-flicker {
+  0%,
+  17%,
+  19%,
+  21%,
+  23%,
+  52%,
+  54%,
+  71%,
+  78%,
+  80%,
+  100% {
+    opacity: 1;
+  }
+  18%,
+  22% {
+    opacity: 0.25;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  53% {
+    opacity: 0.4;
+  }
+  72%,
+  77% {
+    opacity: 0.08;
+  }
+  74% {
+    opacity: 0.3;
+  }
+  79% {
+    opacity: 0.55;
+  }
+}
+
+.spotlight {
+  transform: translateX(-50%);
+  animation: spotlight-sway 4.5s ease-in-out infinite;
+}
+
+/* a luz em si (facho, lente e poca): tudo falha junto */
+.spotlight-light {
+  animation: spotlight-flicker 6.5s linear infinite;
+}
+
+/* dica do joystick: o botao percorre um infinito (lemniscata) em volta do
+   centro, em laco, ate o primeiro toque */
+@keyframes joystick-hint {
+  0%,
+  50%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  12.5% {
+    transform: translate(calc(-50% + 16px), calc(-50% - 11px));
+  }
+  25% {
+    transform: translate(calc(-50% + 22px), -50%);
+  }
+  37.5% {
+    transform: translate(calc(-50% + 16px), calc(-50% + 11px));
+  }
+  62.5% {
+    transform: translate(calc(-50% - 16px), calc(-50% - 11px));
+  }
+  75% {
+    transform: translate(calc(-50% - 22px), -50%);
+  }
+  87.5% {
+    transform: translate(calc(-50% - 16px), calc(-50% + 11px));
+  }
+}
+
+.joystick-hint {
+  animation: joystick-hint 2.8s linear infinite;
+}
+
+/* joystick so em aparelho de toque. Janela estreita no computador nao conta:
+   la o controle e o teclado */
+@media (pointer: coarse) {
+  .virtual-joystick {
+    display: block;
+  }
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: var(--game-background);
+  --foreground: var(--game-foreground);
+  --primary: var(--game-primary);
+  --primary-foreground: var(--game-primaryText);
+  --secondary: var(--game-secondary);
+  --secondary-foreground: var(--game-white);
+  --muted: var(--game-muted);
+  --muted-foreground: var(--game-mutedText);
+  --accent: var(--game-accent);
+  --accent-foreground: var(--game-white);
+  --destructive: var(--game-destructive);
+  --destructive-foreground: var(--game-white);
+  --info: var(--game-info);
+  --info-foreground: var(--game-white);
+  --border: var(--game-border);
+  --input: var(--game-border);
+  --ring: var(--game-primary);
+}
+
+@layer base {
+  /* Travas de mobile, as mesmas do web-gest */
+  * {
+    @apply border-border;
+    /* sem o clarao azul do navegador ao tocar */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  /* sem zoom de duplo toque nem espera de 300 ms no toque */
+  html,
+  #root,
+  main {
+    touch-action: manipulation;
+  }
+
+  /* o jogo trava mais que o web-gest: nenhum gesto do navegador sobre a
+     tela, senao arrastar o joystick rolaria ou daria zoom na pagina */
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* iOS da zoom na pagina ao focar campo com letra menor que 16px */
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    font-size: 16px !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* letra gorda com contorno escuro grosso e sombra dura embaixo, estilo
+   titulo de jogo; o contorno fica atras do preenchimento */
+@utility text-outline {
+  -webkit-text-stroke: 0.22em var(--game-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.09em 0 var(--game-ink);
+}

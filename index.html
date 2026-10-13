@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <!-- app instalavel: cor da barra do sistema e tela cheia no iPhone -->
+    <meta
+      name="theme-color"
+      content="__GAME_THEME_COLOR__"
+    />
+    <meta
+      name="mobile-web-app-capable"
+      content="yes"
+    />
+    <meta
+      name="apple-mobile-web-app-capable"
+      content="yes"
+    />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <!-- icone da aba e da tela inicial do celular: spot sobre o titulo -->
+    <link
+      rel="icon"
+      type="image/png"
+      href="/icon.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/icon.png"
+    />
+    <title>Blade & Bounty</title>
+    <!-- MedievalSharp: fonte dos numeros de dano (engine/renderers/world.renderer.ts).
+         Pirata One: titulos de impacto (font-display, tela de derrota).
+         Alegreya: texto da interface (font-sans) -->
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700;900&family=MedievalSharp&family=Pirata+One&display=swap"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script
+      type="module"
+      src="/src/resources/main.tsx"
+    ></script>
+  </body>
+</html>
