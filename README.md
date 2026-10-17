@@ -24,7 +24,7 @@ Nasceu do Shadow Contract (branch `feat/glb-characters`): a simulação e a engi
 | Paleta                             | roxo, azul e rosa                        | couro, pergaminho, ouro e ferro (`src/shared/colors.ts`)                   |
 | Personagem                         | editor de cores e proporções             | escolha entre três modelos (`look.outfit`)                                 |
 
-Os adaptadores de modelo (`src/app/engine/characters`, `src/app/engine/scenery`) existem iguais nos dois projetos. Correção feita num deles deve ser copiada para o outro: ver `docs/engine-reuse.md`.
+O que serve aos dois (loop, input, rede, servidor de salas, view de personagem glTF, kit de cenário) não é mais copiado: mora na engine compartilhada, a biblioteca `three-hex-engine` (https://github.com/lucashhoffmann/three-hex-engine). Correção é feita lá e chega aqui subindo a versão: ver `docs/engine-reuse.md`.
 
 ## O jogo
 
@@ -114,6 +114,7 @@ pnpm install
 pnpm dev
 ```
 
+
 Abra no navegador o endereço exibido pelo Vite. Para conferir o projeto:
 
 ```bash
@@ -128,7 +129,8 @@ pnpm build
 ## Estrutura
 
 - `src/app/modules`: regras de mundo, salas, inimigos, combate e loja.
-- `src/app/engine`: loop do jogo e renderização com Three.js.
+- `src/app/engine`: renderização deste jogo com Three.js; loop, input e renderer base vêm do `three-hex-engine`.
 - `src/resources`: telas React, controles e interface.
-- `src/shared`: estilos e utilitários compartilhados.
+- `src/shared`: estilos, cores e textos.
+- `three-hex-engine` (dependência npm, https://github.com/lucashhoffmann/three-hex-engine): o que serve a qualquer jogo, compartilhado com os outros jogos.
 - `docs`: contratos entre módulos, organização e estratégia de testes.

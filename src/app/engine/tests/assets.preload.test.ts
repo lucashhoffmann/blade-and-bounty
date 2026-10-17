@@ -4,19 +4,17 @@ import {
   PRELOAD_TIMEOUT,
   preloadGameAssets,
 } from '@/app/engine/assets.preload';
-import { preloadCharacterModel } from '@/app/engine/characters/character-model.loader';
+import { preloadCharacterModel } from 'three-hex-engine/three';
 import {
   BLADE_URLS,
   ENEMY_MODELS,
   PLAYER_OUTFITS,
 } from '@/app/engine/characters/character-models.config';
-import { preloadModelKit } from '@/app/engine/scenery/model-kit';
+import { preloadModelKit } from 'three-hex-engine/three';
 import { SCENERY } from '@/app/engine/scenery/scenery.config';
 
-vi.mock('@/app/engine/characters/character-model.loader', () => ({
+vi.mock('three-hex-engine/three', () => ({
   preloadCharacterModel: vi.fn(),
-}));
-vi.mock('@/app/engine/scenery/model-kit', () => ({
   preloadModelKit: vi.fn(),
 }));
 

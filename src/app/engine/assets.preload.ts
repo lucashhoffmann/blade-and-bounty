@@ -1,9 +1,9 @@
-import { preloadCharacterModel } from '@/app/engine/characters/character-model.loader';
+import { preloadCharacterModel } from 'three-hex-engine/three';
 import {
   ENEMY_MODELS,
   playerModel,
 } from '@/app/engine/characters/character-models.config';
-import { preloadModelKit } from '@/app/engine/scenery/model-kit';
+import { preloadModelKit } from 'three-hex-engine/three';
 import { SCENERY } from '@/app/engine/scenery/scenery.config';
 import type {
   BladeId,

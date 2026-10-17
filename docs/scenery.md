@@ -21,9 +21,14 @@ Mobilia quebra como a caixa; pilar e parede.
 
 | Arquivo                           | Papel                                                      | Sabe de que jogo e? |
 | --------------------------------- | ---------------------------------------------------------- | ------------------- |
-| `scenery/model-kit.ts`            | `ModelKit`: um GLB com varias pecas, pedidas pelo nome     | nao                 |
+| engine: `model-kit.ts`            | `ModelKit`: um GLB com varias pecas, pedidas pelo nome     | nao                 |
 | `scenery/scenery.config.ts`       | `SCENERY`: que peca faz cada coisa neste jogo, e o tamanho | **sim**             |
 | `scripts/pack-kaykit-dungeon.mjs` | monta o GLB a partir do pacote baixado                     | nao                 |
+
+"engine:" e `src/adapters/three/model-kit.ts` do `three-hex-engine`, comum aos
+tres jogos;
+`loadModelKit` e `ModelKit` saem de `three-hex-engine/three`. Correcao nele e
+feita no repositorio da engine.
 
 ```ts
 type ModelKit = {
@@ -146,8 +151,8 @@ Origem e licenca: KayKit Dungeon Pack 1.1, de Kay Lousberg
 A escolha e pelo `id`, entao a mesma caixa tem sempre a mesma cara.
 
 **Outro kit** (outro tema, outro jogo): empacotar no mesmo formato (cada peca
-num no `piece_<nome>`), apontar `SCENERY.url` e os nomes. `model-kit.ts` nao
-muda.
+num no `piece_<nome>`), apontar `SCENERY.url` e os nomes. `model-kit.ts` (na
+engine) nao muda.
 
 **Desligar**: `SCENERY.url = null`. Volta o cenario de caixas.
 

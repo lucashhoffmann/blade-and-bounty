@@ -1,4 +1,4 @@
-import type { CharacterModel } from '@/app/engine/characters/character-model.loader';
+import type { CharacterModel } from 'three-hex-engine/three';
 import {
   KAYKIT_CLIPS_URL,
   KAYKIT_MEDIUM,

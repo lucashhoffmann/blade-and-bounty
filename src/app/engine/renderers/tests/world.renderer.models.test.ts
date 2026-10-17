@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { vi } from 'vitest';
 
-import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
-import type { CharacterView } from '@/app/engine/characters/character-view.types';
+import { loadCharacterView } from 'three-hex-engine/three';
+import type { CharacterView } from 'three-hex-engine/three';
 import { createWorldRenderer } from '@/app/engine/renderers/world.renderer';
 import {
   DASH_COOLDOWN,
@@ -16,7 +16,8 @@ import {
 import { addEnemy, createArenaWorld } from '@/test/world.fixture';
 
 // o carregador de verdade baixa arquivo: aqui entra um corpo de mentira
-vi.mock('@/app/engine/characters/character-model.loader', () => ({
+vi.mock('three-hex-engine/three', async (original) => ({
+  ...(await original<typeof import('three-hex-engine/three')>()),
   loadCharacterView: vi.fn(),
 }));
 // Modelos de mentira para todo mundo: o teste vale com o jogo usando modelo

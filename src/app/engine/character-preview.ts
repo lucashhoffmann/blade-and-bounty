@@ -2,16 +2,13 @@ import { COLORS } from '@/shared/colors';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-import { loadCharacterView } from '@/app/engine/characters/character-model.loader';
+import { loadCharacterView } from 'three-hex-engine/three';
 import {
   PLAYER_OUTFITS,
   playerModel,
   RANGED_STYLES,
 } from '@/app/engine/characters/character-models.config';
-import type {
-  CharacterPose,
-  CharacterView,
-} from '@/app/engine/characters/character-view.types';
+import type { CharacterPose, CharacterView } from 'three-hex-engine/three';
 import {
   createWeaponModel,
   GUNS,

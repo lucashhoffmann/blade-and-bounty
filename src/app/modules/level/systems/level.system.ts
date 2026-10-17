@@ -53,7 +53,7 @@ import type {
   Vec2,
   World,
 } from '@/app/modules/world/types/world.types';
-import { nextRandom } from '@/shared/utils/rng.util';
+import { nextRandom } from 'three-hex-engine/kit';
 import { eventText } from '@/shared/i18n';
 
 // cada modo tem as proprias salas, no tamanho dele

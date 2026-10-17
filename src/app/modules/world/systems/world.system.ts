@@ -54,8 +54,8 @@ import type {
   World,
   WorldMode,
 } from '@/app/modules/world/types/world.types';
-import { angleTo, distance } from '@/shared/utils/math.util';
-import { nextRandom } from '@/shared/utils/rng.util';
+import { angleTo, distance } from 'three-hex-engine/kit';
+import { nextRandom } from 'three-hex-engine/kit';
 
 // ponto de partida: centro da sala inicial, perto da parede de tras
 function startPoint(): Vec2 {
